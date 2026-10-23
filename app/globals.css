@@ -8,18 +8,18 @@
 :root {
   color-scheme: light dark;
 
-  --canvas: light-dark(#fafafa, #0c0c0d);
-  --surface: light-dark(#ffffff, #131315);
-  --raised: light-dark(#f0f0f2, #1d1d20);
-  --line: light-dark(#e3e3e7, #2a2a2e);
-  --fg: light-dark(#18181b, #e6e6e9);
-  --fg-muted: light-dark(#6b6b73, #8d8d96);
-  --accent: light-dark(#2563eb, #4f8bff);
+  --canvas: light-dark(#f8fafc, #09090b);
+  --surface: light-dark(#ffffff, #141416);
+  --raised: light-dark(#f1f5f9, #1e1e22);
+  --line: light-dark(#cbd5e1, #333338);
+  --fg: light-dark(#0f172a, #f8fafc);
+  --fg-muted: light-dark(#475569, #94a3b8);
+  --accent: light-dark(#2563eb, #3b82f6);
   --accent-fg: #ffffff;
 
   /* Direction: into a file, out of a file. */
-  --incoming: light-dark(#15803d, #4ade80);
-  --outgoing: light-dark(#b45309, #fbbf24);
+  --incoming: light-dark(#16a34a, #4ade80);
+  --outgoing: light-dark(#d97706, #fbbf24);
 
   /* File kinds. Kept clear of the accent blue and the two direction hues. */
   --kind-1: light-dark(#7c3aed, #a78bfa);
@@ -27,7 +27,7 @@
   --kind-3: light-dark(#e11d48, #fb7185);
   --kind-4: light-dark(#0891b2, #22d3ee);
 
-  --edge: light-dark(#a1a1aa, #52525b);
+  --edge: light-dark(#64748b, #94a3b8);
 }
 
 :root[data-theme="light"] {
@@ -74,5 +74,6 @@ body {
    a selection gives them a direction. */
 .react-flow__edge-path {
   stroke: var(--edge);
+  stroke-linecap: round;
   fill: none;
 }

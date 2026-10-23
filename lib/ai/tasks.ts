@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { isModelRole, MODEL_ROLES, type ModelRole } from "../roles.ts";
+import { isModelRole, type ModelRole } from "../roles.ts";
 import { traceable } from "langsmith/traceable";
 import { ai, MODELS, traceConfig } from "./client.ts";
 import {
@@ -83,20 +83,8 @@ export async function classifyFile(input: ClassifyInput, deps: { cache: Cache; s
         { role: "system", content: CLASSIFY_SYSTEM },
         { role: "user", content: classifyMessage(question, excerpt) },
       ],
-      reasoning_effort: "low",
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "file_role",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: { role: { type: "string", enum: [...MODEL_ROLES, NONE] } },
-            required: ["role"],
-            additionalProperties: false,
-          },
-        },
-      },
+      response_format: { type: "json_object" },
+      temperature: 0,
     });
     const answer = readRole(response.choices[0]?.message.content ?? null);
     // Parsed before caching, so a refused answer is never stored and served.
@@ -117,7 +105,8 @@ function parseRole(answer: string): ModelRole | null {
 
 function readRole(content: string | null): string {
   if (!content) throw new Error("The model returned no role");
-  const parsed: unknown = JSON.parse(content);
+  const cleaned = content.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+  const parsed: unknown = JSON.parse(cleaned);
   const role: unknown = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "role") : undefined;
   if (typeof role !== "string") throw new Error(`The model's answer had no role: ${content}`);
   return role;
@@ -130,8 +119,7 @@ async function complete(model: string, system: string, user: string): Promise<st
       { role: "system", content: system },
       { role: "user", content: user },
     ],
-    reasoning_effort: "low",
-    verbosity: "low",
+    temperature: 0.2,
   });
   const body = response.choices[0]?.message.content?.trim();
   if (!body) throw new Error(`${model} returned an empty answer (finish reason: ${response.choices[0]?.finish_reason ?? "none"})`);

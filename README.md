@@ -16,7 +16,7 @@
     <img src="https://img.shields.io/badge/-CodeRabbit-FF6600?style=for-the-badge&logo=coderabbit&logoColor=white" />
   </div>
 
-  <h3 align="center">Cartograph | AI-Powered Codebase Dependency Mapper</h3>
+  <h3 align="center">Beacon | AI-Powered Codebase Dependency Mapper</h3>
 
   <div align="center">
     Build this project step by step with our detailed tutorial on <a href="https://www.youtube.com/watch?v=XUkNR-JfHwo" target="_blank"><b>JavaScript Mastery</b></a> YouTube. Join the JSM family!
@@ -42,9 +42,9 @@ If you prefer visual learning, this is the perfect resource for you. Follow our 
 
 ## <a name="introduction">✨ Introduction</a>
 
-Cartograph is a developer tool that turns any public TypeScript or JavaScript repository into an interactive dependency map. Modern engineering teams frequently ship AI-generated code without fully reading every underlying file, creating complex architectural webs with hidden imports and coupled modules. Cartograph solves this by parsing raw source code into navigable nodes and edges, allowing developers to immediately visualize dependency chains, evaluate blast radii before making edits, and ask AI models for context-aware explanations grounded entirely in true AST parsing.
+Beacon is a developer tool that turns any public TypeScript or JavaScript repository into an interactive dependency map. Modern engineering teams frequently ship AI-generated code without fully reading every underlying file, creating complex architectural webs with hidden imports and coupled modules. Cartograph solves this by parsing raw source code into navigable nodes and edges, allowing developers to immediately visualize dependency chains, evaluate blast radii before making edits, and ask AI models for context-aware explanations grounded entirely in true AST parsing.
 
-Built around a strict core principle, Cartograph guarantees that every node and edge on the canvas comes directly from real code analysis rather than AI predictions. By keeping graph arithmetic pure and standalone, the AI agent is only permitted to explain and summarize verified structure. Packed with multi-tenant organization support via Clerk, row-level security on Supabase, and full observability tracing through LangSmith, Cartograph provides production-grade infrastructure for software teams navigating large codebases.
+Built around a strict core principle, Beacon guarantees that every node and edge on the canvas comes directly from real code analysis rather than AI predictions. By keeping graph arithmetic pure and standalone, the AI agent is only permitted to explain and summarize verified structure. Packed with multi-tenant organization support via Clerk, row-level security on Supabase, and full observability tracing through LangSmith, Cartograph provides production-grade infrastructure for software teams navigating large codebases.
 
 If you're getting started and need assistance or face any bugs, join our active Discord community with over **50k+** members. It's a place where people help each other out.
 
@@ -52,7 +52,7 @@ If you're getting started and need assistance or face any bugs, join our active 
 
 ## <a name="tech-stack">⚙️ Tech Stack</a>
 
-- **[Next.js 16](https://nextjs.org/)** is a full-stack React framework that powers Cartograph using the App Router, Server Actions, and dynamic server-rendering capabilities for seamless frontend-backend integration.
+- **[Next.js 16](https://nextjs.org/)** is a full-stack React framework that powers Beacon using the App Router, Server Actions, and dynamic server-rendering capabilities for seamless frontend-backend integration.
 
 - **[TypeScript 5](https://www.typescriptlang.org/)** is a strongly typed superset of JavaScript that ensures strict type safety across the entire application and parser pipeline.
 
@@ -68,7 +68,7 @@ If you're getting started and need assistance or face any bugs, join our active 
 
 - **[LangSmith](https://jsm.dev/carto-langsmith)** is an observability platform that traces every LLM call, records dataset runs, and evaluates model responses against exact ground-truth code metrics.
 
-- **[Tailwind CSS v4](https://tailwindcss.com/)** is a utility-first CSS framework that powers Cartograph's dense, high-information developer interface.
+- **[Tailwind CSS v4](https://tailwindcss.com/)** is a utility-first CSS framework that powers Beacon's dense, high-information developer interface.
 
 - **[CodeRabbit](https://jsm.dev/carto-coderabbit)** is an AI code reviewer that automatically analyzes PRs to enforce architectural rules and codebase consistency.
 
@@ -108,7 +108,7 @@ Make sure you have the following installed on your machine:
 
 ```bash
 git clone https://github.com/adrianhajdin/cartograph.git
-cd cartograph
+cd beacon
 ```
 
 **Installation**
@@ -140,7 +140,7 @@ SUPABASE_SECRET_KEY=
 # LANGSMITH
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=
-LANGSMITH_PROJECT=cartograph
+LANGSMITH_PROJECT=beacon
 LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 
 # OPENAI

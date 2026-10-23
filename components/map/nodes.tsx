@@ -35,7 +35,7 @@ export const MapSelection = createContext<{
   category: string | null;
 }>({ selection: null, highlight: null, hovered: null, focus: null, category: null });
 
-const DIM = "opacity-25";
+const DIM = "opacity-45";
 // Hover is marked with an outline rather than a fill, so it reads the same on
 // a selected row, a dimmed one and a plain one.
 const HOVER_RING = "shadow-[inset_0_0_0_1px_var(--accent)]";
@@ -60,12 +60,12 @@ export function FoldedNodeView({ id, data }: NodeProps<FoldedNode>) {
       onMouseEnter={() => hover({ kind: "group", id })}
       onMouseLeave={() => hover(null)}
       className={`flex size-full cursor-pointer flex-col justify-center gap-[2px] rounded-[4px] border bg-surface ${
-        isHovered ? "border-accent" : "border-line"
+        isHovered ? "border-accent ring-1 ring-accent" : "border-line shadow-xs"
       } ${dim ? DIM : ""}`}
       style={{ paddingInline: PAD_X }}
     >
       <Handle type="target" position={Position.Left} className={anchor} isConnectable={false} />
-      <span className="truncate font-mono text-[11px] leading-[16px] text-fg">{data.label}</span>
+      <span className="truncate font-mono text-[11px] leading-[16px] font-medium text-fg">{data.label}</span>
       <Meta
         fileCount={data.fileCount}
         fanIn={data.fanIn}
@@ -109,7 +109,7 @@ export function PanelNodeView({ id, data }: NodeProps<PanelNode>) {
   return (
     <div
       className={`flex size-full flex-col overflow-hidden rounded-[4px] border bg-surface ${
-        selected ? "border-accent" : "border-fg-muted"
+        selected ? "border-accent ring-1 ring-accent" : "border-line shadow-xs"
       } ${anyLit ? "" : DIM}`}
     >
       <button
@@ -162,7 +162,7 @@ export function PanelNodeView({ id, data }: NodeProps<PanelNode>) {
                 style={{ paddingInline: PAD_X }}
               >
                 <CategorySwatch category={categoryOf(row.path)} />
-                <span className="min-w-0 flex-1 truncate font-mono text-fg">{row.label}</span>
+                <span className="min-w-0 flex-1 truncate font-mono font-medium text-fg">{row.label}</span>
                 <Fan fanIn={row.fanIn} fanOut={row.fanOut} />
               </button>
               <Handle id={row.path} type="source" position={Position.Right} className={anchor} isConnectable={false} />
@@ -202,7 +202,7 @@ function OffscreenRow(props: {
         type="button"
         onClick={props.onClick}
         disabled={props.count === 0}
-        className={`flex size-full items-center text-left text-[10px] text-fg-muted tabular-nums enabled:hover:bg-raised enabled:hover:text-fg disabled:opacity-50 ${
+        className={`flex size-full items-center text-left text-[10px] font-medium text-fg-muted tabular-nums enabled:hover:bg-raised enabled:hover:text-fg disabled:opacity-50 ${
           props.hovered ? HOVER_RING : props.dim ? DIM : ""
         }`}
         style={{ paddingInline: PAD_X }}
@@ -245,7 +245,7 @@ function Meta(props: {
 // direction ever gets.
 function Fan({ fanIn, fanOut }: { fanIn: number; fanOut: number }) {
   return (
-    <span className="flex shrink-0 items-center gap-[6px] text-[10px] tabular-nums">
+    <span className="flex shrink-0 items-center gap-[6px] text-[10px] font-medium tabular-nums">
       <span className="text-incoming" title="Distinct files that import this">
         ←{fanIn}
       </span>

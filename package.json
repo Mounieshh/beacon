@@ -1,5 +1,5 @@
 {
-  "name": "cartograph",
+  "name": "beacon",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,6 +15,12 @@
   "dependencies": {
     "@clerk/nextjs": "^7.9.7",
     "@dagrejs/dagre": "^3.1.1",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
+    "@mui/material-nextjs": "^9.5.0",
     "@supabase/supabase-js": "^2.117.2",
     "@xyflow/react": "^12.12.0",
     "langsmith": "0.10.5",

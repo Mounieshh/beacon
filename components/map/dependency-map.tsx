@@ -129,9 +129,9 @@ function MapCanvas({
           targetHandle: e.targetHandle,
           style: {
             // Thickness says how many imports one line stands for, gently.
-            strokeWidth: Math.min(2.5, 0.75 + Math.log2(e.count) / 3),
+            strokeWidth: stroke ? Math.min(3.5, 2 + Math.log2(e.count) / 2) : Math.min(3, 1.5 + Math.log2(e.count) / 2.5),
             stroke,
-            opacity: (lit && !stroke) || outOfFocus ? 0.15 : 1,
+            opacity: (lit && !stroke) || outOfFocus ? 0.3 : 1,
           },
         });
       }
