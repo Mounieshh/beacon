@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,9 +15,9 @@ export default async function WorkspaceLayout({ children }: LayoutProps<"/">) {
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <Box className="flex min-h-0 flex-1 flex-col">
       <WorkspaceHeader theme={theme} />
-      <main className="min-h-0 flex-1 overflow-auto">{children}</main>
-    </div>
+      <Box component="main" className="min-h-0 flex-1 overflow-auto">{children}</Box>
+    </Box>
   );
 }

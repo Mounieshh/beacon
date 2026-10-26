@@ -1,9 +1,10 @@
+import { Box } from "@mui/material";
 import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <Box className="flex flex-1 items-center justify-center">
       <SignUp />
-    </div>
+    </Box>
   );
 }

@@ -13,13 +13,16 @@ import {
   type ClassifyInput,
   type FileInput,
   type FolderInput,
+  SECURITY_SOLUTION_SYSTEM,
+  securitySolutionMessage,
+  type SecurityFindingInput,
 } from "./prompts.ts";
 
 // The model calls, each behind its cache. The cache read is the first thing
 // inside the traced function, so a hit is still a recorded run, one with no
 // model call in it, and a broken cache is visible as a trace full of calls.
 
-export type Task = "explain-file" | "explain-folder" | "classify-file";
+export type Task = "explain-file" | "explain-folder" | "classify-file" | "solve-security-finding";
 
 export type Cache = {
   read: (key: string) => Promise<string | null>;
@@ -85,7 +88,10 @@ export async function classifyFile(input: ClassifyInput, deps: { cache: Cache; s
       ],
       response_format: { type: "json_object" },
       temperature: 0,
-    });
+      extra_body: {
+        reasoning: { max_tokens: 0 },
+      },
+    } as Parameters<typeof ai>["length"] extends 0 ? any : any);
     const answer = readRole(response.choices[0]?.message.content ?? null);
     // Parsed before caching, so a refused answer is never stored and served.
     const role = parseRole(answer);
@@ -120,7 +126,10 @@ async function complete(model: string, system: string, user: string): Promise<st
       { role: "user", content: user },
     ],
     temperature: 0.2,
-  });
+    extra_body: {
+      reasoning: { max_tokens: 0 },
+    },
+  } as Parameters<typeof ai>["length"] extends 0 ? any : any);
   const body = response.choices[0]?.message.content?.trim();
   if (!body) throw new Error(`${model} returned an empty answer (finish reason: ${response.choices[0]?.finish_reason ?? "none"})`);
   return body;
@@ -130,4 +139,20 @@ function capped(source: string): string {
   if (source.length <= MAX_SOURCE_CHARS) return source;
   const kept = source.slice(0, MAX_SOURCE_CHARS);
   return `${kept}\n[… source truncated here: ${source.length - MAX_SOURCE_CHARS} more characters not shown]`;
+}
+
+export async function solveSecurityFinding(
+  input: SecurityFindingInput,
+  deps: { cache: Cache },
+): Promise<Explanation> {
+  const model = MODELS.explain;
+  const run = traceable(async (finding: SecurityFindingInput): Promise<Explanation> => {
+    const key = cacheKey("solve-security-finding", model, finding);
+    const hit = await deps.cache.read(key);
+    if (hit !== null) return { body: hit, model, cached: true };
+    const body = await complete(model, SECURITY_SOLUTION_SYSTEM, securitySolutionMessage(finding));
+    await deps.cache.write({ key, task: "solve-security-finding", model, body });
+    return { body, model, cached: false };
+  }, traceConfig("solve-security-finding"));
+  return run(input);
 }

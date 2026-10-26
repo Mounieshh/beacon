@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { Box, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
 import type { ComponentProps } from "react";
 import { AnalysisHeader } from "@/components/analysis-header";
@@ -24,7 +25,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analyses/[id]
     const { result, modelRoles, header } = loaded;
     // Only what the pane shows crosses to the browser, not the whole coverage report.
     return (
-      <div className="flex h-full flex-col">
+      <Box className="flex h-full flex-col">
         <AnalysisHeader {...header} />
         <AnalysisView
           files={result.files}
@@ -41,7 +42,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analyses/[id]
             unresolved: result.coverage.imports.total.unresolved,
           }}
         />
-      </div>
+      </Box>
     );
   }
 
@@ -50,13 +51,13 @@ export default async function AnalysisPage({ params }: PageProps<"/analyses/[id]
     // never looked for (roles, routes, require() edges, export names) as
     // checked and found empty.
     return (
-      <div className="flex h-full flex-col">
+      <Box className="flex h-full flex-col">
         <AnalysisHeader {...loaded.header} />
-        <div className="px-3 py-3 text-xs">
-          <p>This analysis was stored by an older version of the parser, which didn&apos;t read everything the current one does.</p>
-          <p className="mt-0.5 text-fg-muted">Re-run it to map it with the current one.</p>
-        </div>
-      </div>
+        <Box className="px-3 py-3 text-xs">
+          <Typography component="p" sx={{ fontSize: "inherit" }}>This analysis was stored by an older version of the parser, which didn&apos;t read everything the current one does.</Typography>
+          <Typography component="p" className="mt-0.5 text-fg-muted" sx={{ fontSize: "inherit" }}>Re-run it to map it with the current one.</Typography>
+        </Box>
+      </Box>
     );
   }
 

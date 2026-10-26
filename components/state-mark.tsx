@@ -5,6 +5,8 @@ import type { Status } from "@/lib/pipeline/stages";
 // direction and interaction elsewhere, so status stays greyscale. The ring
 // fills as an analysis progresses; failure crosses it out; a stale run's ring
 // is broken, because nothing is holding it any more.
+import { Box } from "@mui/material";
+
 export function StateMark({ status, stale = false }: { status: Status; stale?: boolean }) {
   return (
     <SvgIcon

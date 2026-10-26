@@ -8,8 +8,8 @@ import { wrapOpenAI } from "langsmith/wrappers/openai";
 // model under a cached answer without changing its key. Each model is part of
 // its own tasks' cache keys, so re-pinning one invalidates only its own answers.
 export const MODELS = {
-  explain: "recursive/flint-v1.0:free",
-  classify: "recursive/flint-v1.0:free",
+  explain: "cohere/north-mini-code:free",
+  classify: "cohere/north-mini-code:free",
 } as const;
 
 export type TracingStatus = { on: true; project: string } | { on: false; reason: string };

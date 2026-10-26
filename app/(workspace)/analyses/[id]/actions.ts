@@ -1,8 +1,12 @@
 "use server";
 
+import { getExistingSecurityAudit, runSecurityAuditForAnalysis } from "@/lib/security/service";
+import type { SecurityFinding, StoredAudit } from "@/lib/security/types";
+
 import { createHash } from "node:crypto";
 import { tracingStatus, type TracingStatus } from "@/lib/ai/client";
-import { classifyFile, explainFile, explainFolder, type Cache } from "@/lib/ai/tasks";
+import { type SecurityFindingInput } from "@/lib/ai/prompts";
+import { classifyFile, explainFile, explainFolder, solveSecurityFinding, type Cache } from "@/lib/ai/tasks";
 import { loadFileInput, loadFolderInput } from "@/lib/analysis/context";
 import { fetchFileAt, resolveHeadCommit } from "@/lib/pipeline/github";
 import type { ModelRole } from "@/lib/roles";
@@ -174,4 +178,49 @@ function sha256(bytes: Buffer): string {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export type SecurityAuditResult =
+  | { ok: true; audit: StoredAudit; findings: SecurityFinding[] }
+  | { ok: false; error: string };
+
+export async function runSecurityAuditAction(analysisId: string, forceRerun = false): Promise<SecurityAuditResult> {
+  try {
+    const result = await runSecurityAuditForAnalysis(analysisId, { forceRerun });
+    return { ok: true, audit: result.audit, findings: result.findings };
+  } catch (err) {
+    return { ok: false, error: messageOf(err) };
+  }
+}
+
+export async function getSecurityAuditAction(analysisId: string): Promise<SecurityAuditResult> {
+  try {
+    const result = await getExistingSecurityAudit(analysisId);
+    if (!result.audit) {
+      return { ok: false, error: "No security audit found" };
+    }
+    return { ok: true, audit: result.audit, findings: result.findings };
+  } catch (err) {
+    return { ok: false, error: messageOf(err) };
+  }
+}
+
+export type SolveSecurityResult =
+  | { ok: true; body: string; model: string; cached: boolean; tracing: TracingStatus }
+  | { ok: false; error: string };
+
+export async function solveSecurityFindingAction(
+  analysisId: string,
+  finding: SecurityFindingInput,
+): Promise<SolveSecurityResult> {
+  try {
+    const db = await createServerSupabase();
+    const analysis = await readAnalysis(db, analysisId);
+    const cache = cacheFor(db, analysis.organizationId);
+
+    const answer = await solveSecurityFinding(finding, { cache });
+    return { ok: true, ...answer, tracing: tracingStatus() };
+  } catch (error) {
+    return { ok: false, error: messageOf(error) };
+  }
 }

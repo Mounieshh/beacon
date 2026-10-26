@@ -429,6 +429,145 @@ export type Database = {
           },
         ]
       }
+      security_audits: {
+        Row: {
+          analysis_id: string
+          created_at: string
+          critical_count: number
+          error: string | null
+          finished_at: string | null
+          high_count: number
+          id: string
+          info_count: number
+          low_count: number
+          medium_count: number
+          organization_id: string
+          status: string
+          summary: Json
+        }
+        Insert: {
+          analysis_id: string
+          created_at?: string
+          critical_count?: number
+          error?: string | null
+          finished_at?: string | null
+          high_count?: number
+          id?: string
+          info_count?: number
+          low_count?: number
+          medium_count?: number
+          organization_id: string
+          status: string
+          summary?: Json
+        }
+        Update: {
+          analysis_id?: string
+          created_at?: string
+          critical_count?: number
+          error?: string | null
+          finished_at?: string | null
+          high_count?: number
+          id?: string
+          info_count?: number
+          low_count?: number
+          medium_count?: number
+          organization_id?: string
+          status?: string
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audits_analysis_id_organization_id_fkey"
+            columns: ["analysis_id", "organization_id"]
+            isOneToOne: true
+            referencedRelation: "analyses"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "security_audits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_findings: {
+        Row: {
+          analysis_id: string
+          audit_id: string
+          category: string
+          code_snippet: string | null
+          created_at: string
+          description: string
+          file_path: string
+          id: string
+          is_reachable: boolean
+          line_number: number | null
+          organization_id: string
+          reachability_chain: Json
+          rule_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          analysis_id: string
+          audit_id: string
+          category: string
+          code_snippet?: string | null
+          created_at?: string
+          description: string
+          file_path: string
+          id?: string
+          is_reachable?: boolean
+          line_number?: number | null
+          organization_id: string
+          reachability_chain?: Json
+          rule_id: string
+          severity: string
+          title: string
+        }
+        Update: {
+          analysis_id?: string
+          audit_id?: string
+          category?: string
+          code_snippet?: string | null
+          created_at?: string
+          description?: string
+          file_path?: string
+          id?: string
+          is_reachable?: boolean
+          line_number?: number | null
+          organization_id?: string
+          reachability_chain?: Json
+          rule_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_findings_analysis_id_organization_id_fkey"
+            columns: ["analysis_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "security_findings_audit_id_organization_id_fkey"
+            columns: ["audit_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "security_audits"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "security_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

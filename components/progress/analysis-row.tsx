@@ -113,7 +113,7 @@ export function AnalysisRow({ row }: { row: RowData }) {
           color: "var(--fg-muted)",
         }}
       >
-        {row.commitSha ? <span title={row.commitSha}>{row.commitSha.slice(0, 7)}</span> : "—"}
+        {row.commitSha ? <Box component="span" title={row.commitSha}>{row.commitSha.slice(0, 7)}</Box> : "—"}
       </TableCell>
       <TableCell
         align="right"

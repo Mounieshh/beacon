@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Box } from "@mui/material";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   explainFileAction,
   explainFolderAction,
@@ -17,6 +19,7 @@ import type { ModelRole } from "@/lib/roles";
 import { CategoryRail } from "./category-rail";
 import { DetailPane, type RepositoryFacts, type Tab } from "./detail-pane";
 import { targetKey, type ExplainTarget, type ExplanationState, type Freshness } from "./explanation-panel";
+import { loadStoredExplanations, saveStoredExplanation, MAX_GENERATION_LIMIT } from "@/lib/explanation-session";
 import { DependencyMap } from "./map/dependency-map";
 import { RouteTable } from "./route-table";
 import { Shell } from "./shell";
@@ -64,6 +67,32 @@ export function AnalysisView({
   // Explanations fetched on this page, by file or folder, so moving the
   // selection away and back finds the answer still there without asking again.
   const [explanations, setExplanations] = useState<ReadonlyMap<string, ExplanationState>>(() => new Map());
+  const [generationCounts, setGenerationCounts] = useState<ReadonlyMap<string, number>>(() => new Map());
+
+  // Restore project session explanations and quota counts from sessionStorage
+  useEffect(() => {
+    const stored = loadStoredExplanations(analysisId);
+    if (stored.size > 0) {
+      setExplanations((prev) => {
+        const next = new Map(prev);
+        for (const [k, v] of stored.entries()) {
+          if (!next.has(k)) {
+            next.set(k, { status: "done", result: v.result });
+          }
+        }
+        return next;
+      });
+      setGenerationCounts((prev) => {
+        const next = new Map(prev);
+        for (const [k, v] of stored.entries()) {
+          if (!next.has(k)) {
+            next.set(k, v.count);
+          }
+        }
+        return next;
+      });
+    }
+  }, [analysisId]);
   const [freshness, setFreshness] = useState<ReadonlyMap<string, Freshness>>(() => new Map());
   const [modelRoles, setModelRoles] = useState<ReadonlyMap<string, ModelRole>>(() => new Map(Object.entries(storedModelRoles)));
   // The repository's latest commit, asked for once per page load: GitHub's
@@ -73,15 +102,24 @@ export function AnalysisView({
   const explain = useCallback(
     (target: ExplainTarget) => {
       const key = targetKey(target);
+      const currentCount = generationCounts.get(key) ?? 0;
+      if (currentCount >= MAX_GENERATION_LIMIT) {
+        return;
+      }
+
       setExplanations((prev) => new Map(prev).set(key, { status: "loading" }));
       setFreshness((prev) => new Map(prev).set(key, { status: "checking" }));
 
       void (async () => {
         const result = await (target.kind === "file" ? explainFileAction(analysisId, target.path) : explainFolderAction(analysisId, target.dir));
         setExplanations((prev) => new Map(prev).set(key, result.ok ? { status: "done", result } : { status: "error", error: result.error }));
-        if (result.ok && target.kind === "file" && result.labelled?.role) {
-          const role = result.labelled.role;
-          setModelRoles((prev) => new Map(prev).set(target.path, role));
+        if (result.ok) {
+          const newCount = saveStoredExplanation(analysisId, key, result, currentCount);
+          setGenerationCounts((prev) => new Map(prev).set(key, newCount));
+          if (target.kind === "file" && result.labelled?.role) {
+            const role = result.labelled.role;
+            setModelRoles((prev) => new Map(prev).set(target.path, role));
+          }
         }
       })();
 
@@ -175,14 +213,14 @@ export function AnalysisView({
         <CategoryRail files={files} modelRoles={modelRoles} frameworks={repository.projects.map((p) => p.adapter)} active={category} onToggle={toggleCategory} />
       }
       map={
-        <div className="absolute inset-0 flex flex-col">
-          <div role="tablist" className="flex h-7 shrink-0 items-end gap-3 border-b border-line bg-surface px-3 text-[11px]">
+        <Box className="absolute inset-0 flex flex-col">
+          <Box role="tablist" className="flex h-7 shrink-0 items-end gap-3 border-b border-line bg-surface px-3 text-[11px]">
             <CentreTab label="Map" on={centre === "map"} onClick={() => setCentre("map")} />
             <CentreTab label="Routes" count={routes.length} on={centre === "routes"} onClick={() => setCentre("routes")} />
-          </div>
-          <div className="relative min-h-0 flex-1">
+          </Box>
+          <Box className="relative min-h-0 flex-1">
             {/* The map stays mounted under the table, so switching back keeps its viewport. */}
-            <div className={`absolute inset-0 ${centre === "map" ? "" : "invisible"}`}>
+            <Box className={`absolute inset-0 ${centre === "map" ? "" : "invisible"}`}>
               <DependencyMap
                 files={files}
                 edges={edges}
@@ -200,7 +238,7 @@ export function AnalysisView({
                 onHover={setHover}
                 onDeselect={deselect}
               />
-            </div>
+            </Box>
             {centre === "routes" && (
               <RouteTable
                 routes={routes}
@@ -211,8 +249,8 @@ export function AnalysisView({
                 onHover={setHover}
               />
             )}
-          </div>
-        </div>
+          </Box>
+        </Box>
       }
       detail={
         <DetailPane
@@ -235,6 +273,7 @@ export function AnalysisView({
           analysisId={analysisId}
           commitSha={commitSha}
           explanations={explanations}
+          generationCounts={generationCounts}
           freshness={freshness}
           onExplain={explain}
         />
@@ -245,7 +284,8 @@ export function AnalysisView({
 
 function CentreTab({ label, count, on, onClick }: { label: string; count?: number; on: boolean; onClick: () => void }) {
   return (
-    <button
+    <Box
+      component="button"
       type="button"
       role="tab"
       aria-selected={on}
@@ -253,7 +293,7 @@ function CentreTab({ label, count, on, onClick }: { label: string; count?: numbe
       className={`-mb-px border-b pb-1.5 ${on ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"}`}
     >
       {label}
-      {count !== undefined && <span className="ml-1 text-fg-muted tabular-nums">{count}</span>}
-    </button>
+      {count !== undefined && <Box component="span" className="ml-1 text-fg-muted tabular-nums">{count}</Box>}
+    </Box>
   );
 }

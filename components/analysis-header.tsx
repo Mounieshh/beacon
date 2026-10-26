@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Box, Typography } from "@mui/material";
 import { useOrganization } from "@clerk/nextjs";
 import { RerunButton } from "./progress/rerun-button";
+import { SecurityActionCluster } from "./security/security-action-cluster";
 
 // Above the shell, not in it: the map's columns stay where they are. Re-running
 // hands the page back to the progress view, which the server renders once the
@@ -87,7 +88,12 @@ export function AnalysisHeader({
         {commitSha.slice(0, 7)}
       </Typography>
 
-      <Box component="span" sx={{ ml: "auto" }}>
+      <Box component="span" sx={{ ml: "auto", display: "inline-flex", alignItems: "center", gap: 1 }}>
+        <SecurityActionCluster
+          analysisId={analysisId}
+          repository={repository}
+          commitSha={commitSha}
+        />
         <RerunButton analysisId={analysisId} onStarted={() => router.refresh()} />
       </Box>
     </Box>

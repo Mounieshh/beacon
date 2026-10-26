@@ -195,8 +195,8 @@ export default async function OrganizationsPage() {
                         href={projectsUrl}
                         className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-accent hover:bg-surface font-mono whitespace-nowrap"
                       >
-                        <span>view runs</span>
-                        <span>&rarr;</span>
+                        <Box component="span">view runs</Box>
+                        <Box component="span">&rarr;</Box>
                       </Link>
                     </TableCell>
                   </TableRow>

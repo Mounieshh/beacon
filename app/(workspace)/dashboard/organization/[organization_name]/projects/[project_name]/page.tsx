@@ -56,14 +56,14 @@ export default async function SpecificProjectRunsPage({ params }: PageProps) {
         <SubmitForm />
 
         {rows.length > 0 && (
-          <ul className="ml-auto flex items-center gap-3 text-xs text-fg-muted tabular-nums">
+          <Box component="ul" className="ml-auto flex items-center gap-3 text-xs text-fg-muted tabular-nums">
             {TALLY_ORDER.filter((s) => counts.has(s)).map((s) => (
-              <li key={s} className="flex items-center gap-1.5">
+              <Box component="li" key={s} className="flex items-center gap-1.5">
                 <StateMark status={s === "stale" ? "running" : s} stale={s === "stale"} />
                 {counts.get(s)} {s}
-              </li>
+              </Box>
             ))}
-          </ul>
+          </Box>
         )}
       </Box>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { Box } from "@mui/material";
+
 import { useMemo, useState, type ReactNode } from "react";
 import { categoryLabel, categoryOf, countByCategory } from "@/lib/graph/categories";
 import { neighboursOf, rankRepository, SUMMARY_LIMIT, type Neighbour, type Ranked } from "@/lib/graph/detail";
@@ -46,6 +48,7 @@ type Props = {
   analysisId: string;
   commitSha: string;
   explanations: ReadonlyMap<string, ExplanationState>;
+  generationCounts?: ReadonlyMap<string, number>;
   freshness: ReadonlyMap<string, Freshness>;
   onExplain: (target: ExplainTarget) => void;
 };
@@ -75,6 +78,7 @@ export function DetailPane(props: Props) {
       commitSha={props.commitSha}
       state={props.explanations.get(targetKey(target))}
       freshness={props.freshness.get(targetKey(target))}
+      generationCount={props.generationCounts?.get(targetKey(target)) ?? (props.explanations.get(targetKey(target))?.status === "done" ? 1 : 0)}
       onExplain={props.onExplain}
       isPath={(p) => byPath.has(p)}
       renderPath={(p) => <InlinePath path={p} paths={paths} />}
@@ -109,7 +113,7 @@ export function DetailPane(props: Props) {
   if (!group) return null;
   return (
     <Selected
-      title={<span className="font-mono text-[12px] break-all">{group.dir === "." ? "(root)" : `${group.dir}/`}</span>}
+      title={<Box component="span" className="font-mono text-[12px] break-all">{group.dir === "." ? "(root)" : `${group.dir}/`}</Box>}
       caption="folder"
       tab={props.tab}
       onTab={props.onTab}
@@ -153,12 +157,12 @@ function RepositorySummary({
         <h2 className="font-mono text-[13px] font-semibold break-all">{repository.name}</h2>
         <p className="mt-0.5 text-[11px] text-fg-muted">
           Framework{" "}
-          <span className="text-fg">{rootAdapter === "none" ? "none detected" : rootAdapter}</span>
+          <Box component="span" className="text-fg">{rootAdapter === "none" ? "none detected" : rootAdapter}</Box>
           {nested.length > 0 && " at the root"}
         </p>
         {nested.map((p) => (
           <p key={p.path} className="text-[11px] text-fg-muted">
-            <span className="text-fg">{p.adapter}</span> in <span className="font-mono">{p.path}/</span>
+            <Box component="span" className="text-fg">{p.adapter}</Box> in <Box component="span" className="font-mono">{p.path}/</Box>
           </p>
         ))}
       </header>
@@ -183,21 +187,21 @@ function RepositorySummary({
         title="Most depended on"
         hint="by files importing it"
         ranked={ranked.mostDependedOn}
-        figure={(f) => <span className="text-incoming">←{f.fanIn}</span>}
+        figure={(f) => <Box component="span" className="text-incoming">←{f.fanIn}</Box>}
         paths={paths}
       />
       <RankedList
         title="Imported by nothing"
         hint="where reading starts"
         ranked={ranked.unimported}
-        figure={(f) => <span className="text-outgoing">{f.fanOut}→</span>}
+        figure={(f) => <Box component="span" className="text-outgoing">{f.fanOut}→</Box>}
         paths={paths}
       />
 
       <section className="mt-3 px-3">
         <h3 className="flex items-baseline justify-between text-[11px] text-fg-muted">
-          <span>Unidentified by convention</span>
-          <span className="text-fg tabular-nums">{files.length - byConvention}</span>
+          <Box component="span">Unidentified by convention</Box>
+          <Box component="span" className="text-fg tabular-nums">{files.length - byConvention}</Box>
         </h3>
         <p className="mt-0.5 text-[11px] text-fg-muted tabular-nums">
           {byConvention} matched a framework, tool or test convention; only imports reach the rest.
@@ -213,9 +217,9 @@ function RepositorySummary({
           onClick={() => onInsightsOpen(!insightsOpen)}
           className="flex w-full items-baseline gap-1.5 px-3 py-2 text-left text-[11px] hover:bg-raised"
         >
-          <span className="w-2 text-fg-muted">{insightsOpen ? "▾" : "▸"}</span>
-          <span className="text-fg">Insights</span>
-          <span className="text-fg-muted">facts from the import graph</span>
+          <Box component="span" className="w-2 text-fg-muted">{insightsOpen ? "▾" : "▸"}</Box>
+          <Box component="span" className="text-fg">Insights</Box>
+          <Box component="span" className="text-fg-muted">facts from the import graph</Box>
         </button>
         {insightsOpen && <InsightList files={files} edges={edges} paths={paths} />}
       </section>
@@ -237,7 +241,7 @@ function InsightList({ files, edges, paths }: { files: ParsedFile[]; edges: Edge
         sentence={INSIGHT_SENTENCES.unimported}
         count={insights.unimported.length}
         items={insights.unimported}
-        render={(f) => <PathRow key={f.path} path={f.path} paths={paths} trailing={<span className="text-outgoing">{f.fanOut}→</span>} />}
+        render={(f) => <PathRow key={f.path} path={f.path} paths={paths} trailing={<Box component="span" className="text-outgoing">{f.fanOut}→</Box>} />}
       />
       <InsightSection
         title="Imported unusually often"
@@ -245,7 +249,7 @@ function InsightList({ files, edges, paths }: { files: ParsedFile[]; edges: Edge
         sentence={INSIGHT_SENTENCES.heavilyImported}
         count={heavilyImported.files.length}
         items={heavilyImported.files}
-        render={(f) => <PathRow key={f.path} path={f.path} paths={paths} trailing={<span className="text-incoming">←{f.fanIn}</span>} />}
+        render={(f) => <PathRow key={f.path} path={f.path} paths={paths} trailing={<Box component="span" className="text-incoming">←{f.fanIn}</Box>} />}
       />
       <InsightSection
         title="Import loops"
@@ -261,7 +265,7 @@ function InsightList({ files, edges, paths }: { files: ParsedFile[]; edges: Edge
         count={insights.long.length}
         items={insights.long}
         render={(f) => (
-          <PathRow key={f.path} path={f.path} paths={paths} trailing={<span className="text-fg-muted">{f.lines.toLocaleString("en")}</span>} />
+          <PathRow key={f.path} path={f.path} paths={paths} trailing={<Box component="span" className="text-fg-muted">{f.lines.toLocaleString("en")}</Box>} />
         )}
       />
     </div>
@@ -281,12 +285,12 @@ function InsightSection<T>(props: {
   return (
     <section className="mt-2">
       <h3 className="flex items-baseline gap-1.5 px-3 text-[11px] text-fg-muted">
-        <span className="text-fg">{props.title}</span>
-        {props.hint && <span>{props.hint}</span>}
-        <span className="ml-auto tabular-nums">{props.count}</span>
+        <Box component="span" className="text-fg">{props.title}</Box>
+        {props.hint && <Box component="span">{props.hint}</Box>}
+        <Box component="span" className="ml-auto tabular-nums">{props.count}</Box>
       </h3>
       <p className="px-3 pb-0.5 text-[11px] text-fg-muted">{props.sentence}</p>
-      {props.items.length === 0 ? <p className="px-3 text-[11px] text-fg-muted">None.</p> : <ul>{shown.map(props.render)}</ul>}
+      {props.items.length === 0 ? <p className="px-3 text-[11px] text-fg-muted">None.</p> : <Box component="ul">{shown.map(props.render)}</Box>}
       {props.items.length > SUMMARY_LIMIT && (
         <button
           type="button"
@@ -303,22 +307,22 @@ function InsightSection<T>(props: {
 // One loop, in import order, so it can be walked by opening each file in turn.
 function CycleRows({ cycle, paths }: { cycle: Cycle; paths: PathActions }) {
   return (
-    <li className="mt-1">
+    <Box component="li" className="mt-1">
       <p className="px-3 text-[10px] text-fg-muted tabular-nums">
         {cycle.files.length} {cycle.files.length === 1 ? "file" : "files"}
         {cycle.members > cycle.files.length && `, one loop among ${cycle.members} files that all reach each other`}
       </p>
-      <ul>
+      <Box component="ul">
         {cycle.files.map((f, i) => (
           <PathRow
             key={f}
             path={f}
             paths={paths}
-            trailing={<span className="text-outgoing">{i === cycle.files.length - 1 ? "↩ first" : "↓"}</span>}
+            trailing={<Box component="span" className="text-outgoing">{i === cycle.files.length - 1 ? "↩ first" : "↓"}</Box>}
           />
         ))}
-      </ul>
-    </li>
+      </Box>
+    </Box>
   );
 }
 
@@ -326,8 +330,8 @@ function Count({ label, value, note, title }: { label: string; value: number | n
   return (
     <div className="border-r border-line px-3 py-2 last:border-r-0" title={title}>
       <dt className="text-[11px] text-fg-muted">{label}</dt>
-      <dd className="text-[15px] leading-5 tabular-nums">{value ?? <span className="text-fg-muted">—</span>}</dd>
-      {note && <dd className="text-[10px] text-fg-muted tabular-nums">{note}</dd>}
+      <Box component="dd" className="text-[15px] leading-5 tabular-nums">{value ?? <Box component="span" className="text-fg-muted">—</Box>}</Box>
+      {note && <Box component="dd" className="text-[10px] text-fg-muted tabular-nums">{note}</Box>}
     </div>
   );
 }
@@ -343,18 +347,18 @@ function RankedList(props: {
   return (
     <section className="mt-3">
       <h3 className="flex items-baseline gap-1.5 px-3 pb-0.5 text-[11px] text-fg-muted">
-        <span className="text-fg">{props.title}</span>
-        <span>{props.hint}</span>
-        <span className="ml-auto tabular-nums">{total}</span>
+        <Box component="span" className="text-fg">{props.title}</Box>
+        <Box component="span">{props.hint}</Box>
+        <Box component="span" className="ml-auto tabular-nums">{total}</Box>
       </h3>
       {files.length === 0 ? (
         <p className="px-3 text-[11px] text-fg-muted">None.</p>
       ) : (
-        <ul>
+        <Box component="ul">
           {files.map((f) => (
             <PathRow key={f.path} path={f.path} paths={props.paths} trailing={props.figure(f)} />
           ))}
-        </ul>
+        </Box>
       )}
       {total > files.length && (
         <p className="px-3 pt-0.5 text-[10px] text-fg-muted tabular-nums">{total - files.length} more not listed</p>
@@ -415,8 +419,8 @@ function PathTitle({ path, paths }: { path: string; paths: PathActions }) {
       onMouseLeave={() => paths.onHover(null)}
       className="text-left font-mono text-[12px] break-all hover:underline"
     >
-      {slash >= 0 && <span className="text-fg-muted">{path.slice(0, slash + 1)}</span>}
-      <span className="font-semibold">{path.slice(slash + 1)}</span>
+      {slash >= 0 && <Box component="span" className="text-fg-muted">{path.slice(0, slash + 1)}</Box>}
+      <Box component="span" className="font-semibold">{path.slice(slash + 1)}</Box>
     </button>
   );
 }
@@ -439,42 +443,42 @@ function FileStructure(props: {
     <>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-b border-line px-3 py-2 text-[11px]">
         <Fact label="Kind">
-          <span className="flex items-center gap-1.5 font-mono">
+          <Box component="span" className="flex items-center gap-1.5 font-mono">
             <CategorySwatch category={category} />
             {categoryLabel(category)}
-          </span>
+          </Box>
         </Fact>
         <Fact label="Role">
           {file.role !== null ? (
             railLabel(file.role)
           ) : modelRole !== null ? (
             <>
-              {railLabel(modelRole)} <span className="text-fg-muted">· labelled by the model</span>
+              {railLabel(modelRole)} <Box component="span" className="text-fg-muted">· labelled by the model</Box>
             </>
           ) : (
-            <span className="text-fg-muted">{railLabel(UNCLASSIFIED).toLowerCase()}</span>
+            <Box component="span" className="text-fg-muted">{railLabel(UNCLASSIFIED).toLowerCase()}</Box>
           )}
         </Fact>
         <Fact label="Folder">
-          <span className="font-mono break-all">{file.module}</span>
+          <Box component="span" className="font-mono break-all">{file.module}</Box>
         </Fact>
         <Fact label="Length">
           {file.lines} {file.lines === 1 ? "line" : "lines"}
         </Fact>
         <Fact label="Depends on">
-          <span className="text-outgoing">{imports.length}</span> {imports.length === 1 ? "file" : "files"}
+          <Box component="span" className="text-outgoing">{imports.length}</Box> {imports.length === 1 ? "file" : "files"}
         </Fact>
         <Fact label="Depended on by">
-          <span className="text-incoming">{importedBy.length}</span> {importedBy.length === 1 ? "file" : "files"}
+          <Box component="span" className="text-incoming">{importedBy.length}</Box> {importedBy.length === 1 ? "file" : "files"}
         </Fact>
         <Fact label="Reached by">
-          {file.reachedBy ?? <span className="text-fg-muted">imports only</span>}
+          {file.reachedBy ?? <Box component="span" className="text-fg-muted">imports only</Box>}
         </Fact>
         <Fact label="Exports">
           {file.exports.length === 0 ? (
-            <span className="text-fg-muted">nothing named in this file</span>
+            <Box component="span" className="text-fg-muted">nothing named in this file</Box>
           ) : (
-            <span className="font-mono break-all">{file.exports.join(", ")}</span>
+            <Box component="span" className="font-mono break-all">{file.exports.join(", ")}</Box>
           )}
         </Fact>
       </dl>
@@ -483,10 +487,10 @@ function FileStructure(props: {
         <WalkButton direction="dependencies" label="Dependency chain" walk={walk} onWalk={onWalk} />
       </div>
       {walk && <ReachList file={file.path} graph={graph} direction={walk} paths={paths} />}
-      <NeighbourList title="Imports" count={<span className="text-outgoing">{imports.length}→</span>} rows={imports} paths={paths} />
+      <NeighbourList title="Imports" count={<Box component="span" className="text-outgoing">{imports.length}→</Box>} rows={imports} paths={paths} />
       <NeighbourList
         title="Imported by"
-        count={<span className="text-incoming">←{importedBy.length}</span>}
+        count={<Box component="span" className="text-incoming">←{importedBy.length}</Box>}
         rows={importedBy}
         paths={paths}
       />
@@ -523,9 +527,9 @@ function ReachList({ file, graph, direction, paths }: { file: string; graph: Adj
   return (
     <section className="mt-3">
       <h3 className="flex items-baseline gap-1.5 px-3 pb-0.5 text-[11px] text-fg-muted">
-        <span className="text-fg">{dependents ? "Blast radius" : "Dependency chain"}</span>
-        <span>{dependents ? "what imports this, directly or through others" : "what this imports, directly or through others"}</span>
-        <span className={`ml-auto tabular-nums ${dependents ? "text-incoming" : "text-outgoing"}`}>{total}</span>
+        <Box component="span" className="text-fg">{dependents ? "Blast radius" : "Dependency chain"}</Box>
+        <Box component="span">{dependents ? "what imports this, directly or through others" : "what this imports, directly or through others"}</Box>
+        <Box component="span" className={`ml-auto tabular-nums ${dependents ? "text-incoming" : "text-outgoing"}`}>{total}</Box>
       </h3>
       {steps.map((list, i) => (
         <div key={i}>
@@ -535,11 +539,11 @@ function ReachList({ file, graph, direction, paths }: { file: string; graph: Adj
           {list.length === 0 ? (
             <p className="px-3 text-[11px] text-fg-muted">None.</p>
           ) : (
-            <ul>
+            <Box component="ul">
               {list.map((p) => (
                 <PathRow key={p} path={p} paths={paths} />
               ))}
-            </ul>
+            </Box>
           )}
         </div>
       ))}
@@ -554,7 +558,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
       <dt className="text-fg-muted">{label}</dt>
-      <dd className="min-w-0 tabular-nums">{children}</dd>
+      <Box component="dd" className="min-w-0 tabular-nums">{children}</Box>
     </>
   );
 }
@@ -563,17 +567,17 @@ function NeighbourList(props: { title: string; count: ReactNode; rows: Neighbour
   return (
     <section className="mt-3">
       <h3 className="flex items-baseline justify-between px-3 pb-0.5 text-[11px]">
-        <span>{props.title}</span>
-        <span className="tabular-nums">{props.count}</span>
+        <Box component="span">{props.title}</Box>
+        <Box component="span" className="tabular-nums">{props.count}</Box>
       </h3>
       {props.rows.length === 0 ? (
         <p className="px-3 text-[11px] text-fg-muted">None.</p>
       ) : (
-        <ul>
+        <Box component="ul">
           {props.rows.map((n) => (
             <PathRow key={n.path} path={n.path} paths={props.paths} trailing={<EdgeMarks neighbour={n} />} />
           ))}
-        </ul>
+        </Box>
       )}
     </section>
   );
@@ -588,7 +592,7 @@ function EdgeMarks({ neighbour }: { neighbour: Neighbour }) {
     ...(neighbour.typeOnly ? ["type"] : []),
   ];
   if (marks.length === 0) return null;
-  return <span className="text-fg-muted">{marks.join(" · ")}</span>;
+  return <Box component="span" className="text-fg-muted">{marks.join(" · ")}</Box>;
 }
 
 function GroupStructure({ files, fan }: { files: string[]; fan: { fanIn: number; fanOut: number } }) {
@@ -598,23 +602,23 @@ function GroupStructure({ files, fan }: { files: string[]; fan: { fanIn: number;
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-b border-line px-3 py-2 text-[11px]">
         <Fact label="Files">{files.length}</Fact>
         <Fact label="Imported from outside by">
-          <span className="text-incoming">{fan.fanIn}</span> {fan.fanIn === 1 ? "file" : "files"}
+          <Box component="span" className="text-incoming">{fan.fanIn}</Box> {fan.fanIn === 1 ? "file" : "files"}
         </Fact>
         <Fact label="Imports from outside">
-          <span className="text-outgoing">{fan.fanOut}</span> {fan.fanOut === 1 ? "file" : "files"}
+          <Box component="span" className="text-outgoing">{fan.fanOut}</Box> {fan.fanOut === 1 ? "file" : "files"}
         </Fact>
       </dl>
       <section className="mt-3">
         <h3 className="px-3 pb-0.5 text-[11px]">Kinds of file inside</h3>
-        <ul>
+        <Box component="ul">
           {kinds.map(({ category, count }) => (
-            <li key={category} className="flex h-[22px] items-center gap-2 px-3 text-[11px]">
+            <Box component="li" key={category} className="flex h-[22px] items-center gap-2 px-3 text-[11px]">
               <CategorySwatch category={category} />
-              <span className="flex-1 font-mono">{categoryLabel(category)}</span>
-              <span className="text-fg-muted tabular-nums">{count}</span>
-            </li>
+              <Box component="span" className="flex-1 font-mono">{categoryLabel(category)}</Box>
+              <Box component="span" className="text-fg-muted tabular-nums">{count}</Box>
+            </Box>
           ))}
-        </ul>
+        </Box>
       </section>
     </>
   );
@@ -648,7 +652,7 @@ function PathRow({ path, paths, trailing }: { path: string; paths: PathActions; 
   const slash = path.lastIndexOf("/");
   const hovered = paths.isHovered(path);
   return (
-    <li>
+    <Box component="li">
       <button
         type="button"
         title={path}
@@ -659,12 +663,12 @@ function PathRow({ path, paths, trailing }: { path: string; paths: PathActions; 
           hovered ? "bg-accent/15 shadow-[inset_2px_0_0_var(--accent)]" : "hover:bg-raised"
         }`}
       >
-        <span className="flex min-w-0 flex-1 font-mono">
-          {slash >= 0 && <span className="truncate text-fg-muted">{path.slice(0, slash + 1)}</span>}
-          <span className="shrink-0">{path.slice(slash + 1)}</span>
-        </span>
-        {trailing && <span className="shrink-0 text-[10px] tabular-nums">{trailing}</span>}
+        <Box component="span" className="flex min-w-0 flex-1 font-mono">
+          {slash >= 0 && <Box component="span" className="truncate text-fg-muted">{path.slice(0, slash + 1)}</Box>}
+          <Box component="span" className="shrink-0">{path.slice(slash + 1)}</Box>
+        </Box>
+        {trailing && <Box component="span" className="shrink-0 text-[10px] tabular-nums">{trailing}</Box>}
       </button>
-    </li>
+    </Box>
   );
 }

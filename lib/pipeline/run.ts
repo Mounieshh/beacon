@@ -46,7 +46,7 @@ export async function continueRun(db: Db, claimed: ClaimedRun): Promise<void> {
     });
     await downloadArchive(repository, sha, workdir);
 
-    await enter(db, claimed, "select", "Walking the repository for TypeScript and JavaScript files");
+    await enter(db, claimed, "select", "Walking the repository for source files");
     const selection = selectFiles(workdir);
 
     const { candidates, skipped } = selection.walk;

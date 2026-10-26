@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Box } from "@mui/material";
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { ThemeControl } from "@/components/theme-control";
 import type { Theme } from "@/lib/theme";
@@ -15,17 +16,17 @@ export function WorkspaceHeader({ theme }: Props) {
   const isOrganizationsPage = pathname === "/dashboard/organizations";
 
   return (
-    <header className="flex h-9 shrink-0 items-center gap-3 border-b border-line bg-surface px-3">
+    <Box component="header" className="flex h-9 shrink-0 items-center gap-3 border-b border-line bg-surface px-3">
       <Link
         href="/dashboard/organizations"
         className="flex items-center gap-1.5 font-mono text-xs font-semibold tracking-tight hover:opacity-80"
       >
-        <span>beacon</span>
+        <Box component="span">beacon</Box>
       </Link>
 
       {!isOrganizationsPage && (
         <>
-          <span className="text-line">/</span>
+          <Box component="span" className="text-line">/</Box>
           <OrganizationSwitcher
             hidePersonal
             afterSelectOrganizationUrl="/"
@@ -35,10 +36,10 @@ export function WorkspaceHeader({ theme }: Props) {
         </>
       )}
 
-      <div className="ml-auto flex items-center gap-3">
+      <Box className="ml-auto flex items-center gap-3">
         <ThemeControl initial={theme} />
         <UserButton />
-      </div>
-    </header>
+      </Box>
+    </Box>
   );
 }

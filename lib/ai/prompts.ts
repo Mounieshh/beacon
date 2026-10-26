@@ -8,7 +8,7 @@ import type { EdgeKind } from "../parser/types.ts";
 
 // Bump when a prompt's wording changes: it's part of every cache key, so old
 // answers stop matching rather than being served for a question no longer asked.
-export const PROMPT_VERSION = 1;
+export const PROMPT_VERSION = 2;
 
 export type NeighbourFacts = {
   path: string;
@@ -59,7 +59,7 @@ const FORMAT = `Formatting: plain paragraphs. You may use only three kinds of fo
 
 const HONESTY = `The lists of imports and importers were resolved by a parser and are complete: they are the only connections that exist. Never mention a file that isn't named in the input, and never suggest a connection the input doesn't list. Write every repository path in full, exactly as given, inside backticks. Describe what the code does; don't grade it, rate it, or suggest improvements.`;
 
-export const EXPLAIN_FILE_SYSTEM = `You explain one file of a TypeScript or JavaScript repository to a developer reading the repository for the first time.
+export const EXPLAIN_FILE_SYSTEM = `You explain one file of a codebase or software repository to a developer reading the repository for the first time.
 
 You're given the file's source, and every file it imports and every file that imports it, each with its role and the names it exports. Say what this file does and what part it plays between the files that depend on it and the files it depends on. Two or three short paragraphs; a short bullet list only if it genuinely helps. Refer to neighbours by path where it helps the reader, not as an exhaustive inventory.
 
@@ -67,7 +67,7 @@ ${HONESTY}
 
 ${FORMAT}`;
 
-export const EXPLAIN_FOLDER_SYSTEM = `You explain one folder of a TypeScript or JavaScript repository to a developer reading the repository for the first time.
+export const EXPLAIN_FOLDER_SYSTEM = `You explain one folder of a codebase or software repository to a developer reading the repository for the first time.
 
 The question is about the folder as a whole, not any single file in it: what kind of code lives here and what the files have in common, and why files outside point at it, meaning which of its files are imported from outside and what imports them. If little or nothing outside imports it, say so and say what it depends on instead. Two or three short paragraphs; a short bullet list only if it genuinely helps.
 
@@ -75,7 +75,7 @@ ${HONESTY}
 
 ${FORMAT}`;
 
-export const CLASSIFY_SYSTEM = `You label one file of a TypeScript or JavaScript repository that no framework convention identified. Choose the single role that best describes it from: ${MODEL_ROLES.join(", ")}. Answer "none" if none of them clearly fits. Use its path, the names it exports, its source, and the roles of the files around it. Answer with a single JSON object in the form {"role": "<role>"}.`;
+export const CLASSIFY_SYSTEM = `You label one file of a codebase or software repository that no framework convention identified. Choose the single role that best describes it from: ${MODEL_ROLES.join(", ")}. Answer "none" if none of them clearly fits. Use its path, the names it exports, its source, and the roles of the files around it. Answer with a single JSON object in the form {"role": "<role>"}.`;
 
 export function explainFileMessage(input: FileInput, source: string): string {
   return [
@@ -149,4 +149,46 @@ function neighbourLines(list: NeighbourFacts[]): string[] {
     ];
     return `- ${n.path} (${marks.join("; ")})`;
   });
+}
+
+export type SecurityFindingInput = {
+  ruleId: string;
+  category: string;
+  severity: string;
+  title: string;
+  description: string;
+  filePath: string;
+  lineNumber: number | null;
+  codeSnippet: string | null;
+  reachabilityChain: string[];
+};
+
+export const SECURITY_SOLUTION_SYSTEM = `You are a senior security engineer and code auditor.
+You are given a static security vulnerability or loophole found in a software repository across any programming language, framework, or configuration.
+Explain how to resolve this loophole and provide a concrete, production-ready fix.
+
+Format your response cleanly:
+- 1-2 short paragraphs explaining why this is vulnerable and the real-world risk.
+- A concise "Remediation" section showing the safe code replacement for the language and framework used.
+- If reachable from an external API or HTTP route, mention how input validation, parameterization, or security guards should be added.
+
+Keep your response practical and focused on the code. You may use inline code in backticks and markdown code blocks.`;
+
+export function securitySolutionMessage(input: SecurityFindingInput): string {
+  return [
+    `Vulnerability: ${input.title} (${input.severity.toUpperCase()})`,
+    `Rule ID: ${input.ruleId}`,
+    `Category: ${input.category}`,
+    `File: ${input.filePath}${input.lineNumber !== null ? `:${input.lineNumber}` : ""}`,
+    input.reachabilityChain.length > 0
+      ? `Reachable from public HTTP route via: ${input.reachabilityChain.join(" -> ")}`
+      : "Internal module / not directly exposed to public HTTP routes",
+    "",
+    `Description: ${input.description}`,
+    input.codeSnippet && input.codeSnippet.trim()
+      ? `\nCode Snippet:\n\`\`\`\n${input.codeSnippet.trim()}\n\`\`\``
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

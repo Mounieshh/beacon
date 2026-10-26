@@ -1,5 +1,7 @@
 "use client";
 
+import { Box } from "@mui/material";
+
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
 import { createContext, useContext, useEffect, useRef, type WheelEvent } from "react";
 import { categoryOf } from "@/lib/graph/categories";
@@ -65,7 +67,7 @@ export function FoldedNodeView({ id, data }: NodeProps<FoldedNode>) {
       style={{ paddingInline: PAD_X }}
     >
       <Handle type="target" position={Position.Left} className={anchor} isConnectable={false} />
-      <span className="truncate font-mono text-[11px] leading-[16px] font-medium text-fg">{data.label}</span>
+      <Box component="span" className="truncate font-mono text-[11px] leading-[16px] font-medium text-fg">{data.label}</Box>
       <Meta
         fileCount={data.fileCount}
         fanIn={data.fanIn}
@@ -123,7 +125,7 @@ export function PanelNodeView({ id, data }: NodeProps<PanelNode>) {
         }`}
         style={{ height: PANEL_HEADER_HEIGHT, paddingInline: PAD_X }}
       >
-        <span className="truncate font-mono text-[11px] leading-[16px] font-semibold text-fg">{data.label}</span>
+        <Box component="span" className="truncate font-mono text-[11px] leading-[16px] font-semibold text-fg">{data.label}</Box>
         <Meta
           fileCount={data.fileCount}
           fanIn={data.fanIn}
@@ -162,7 +164,7 @@ export function PanelNodeView({ id, data }: NodeProps<PanelNode>) {
                 style={{ paddingInline: PAD_X }}
               >
                 <CategorySwatch category={categoryOf(row.path)} />
-                <span className="min-w-0 flex-1 truncate font-mono font-medium text-fg">{row.label}</span>
+                <Box component="span" className="min-w-0 flex-1 truncate font-mono font-medium text-fg">{row.label}</Box>
                 <Fan fanIn={row.fanIn} fanOut={row.fanOut} />
               </button>
               <Handle id={row.path} type="source" position={Position.Right} className={anchor} isConnectable={false} />
@@ -224,20 +226,20 @@ function Meta(props: {
 }) {
   const { fileCount, fanIn, fanOut, match } = props;
   return (
-    <span className="flex items-center gap-[8px] text-[10px] leading-[12px] text-fg-muted tabular-nums">
+    <Box component="span" className="flex items-center gap-[8px] text-[10px] leading-[12px] text-fg-muted tabular-nums">
       {match ? (
-        <span className="flex items-center gap-[4px]" title={`${match.count} of ${fileCount} files match`}>
-          <span>
-            <span className="text-fg">{match.count}</span>/{fileCount} {fileCount === 1 ? "file" : "files"}
-          </span>
-        </span>
+        <Box component="span" className="flex items-center gap-[4px]" title={`${match.count} of ${fileCount} files match`}>
+          <Box component="span">
+            <Box component="span" className="text-fg">{match.count}</Box>/{fileCount} {fileCount === 1 ? "file" : "files"}
+          </Box>
+        </Box>
       ) : (
-        <span>
+        <Box component="span">
           {fileCount} {fileCount === 1 ? "file" : "files"}
-        </span>
+        </Box>
       )}
       <Fan fanIn={fanIn} fanOut={fanOut} />
-    </span>
+    </Box>
   );
 }
 
@@ -245,13 +247,13 @@ function Meta(props: {
 // direction ever gets.
 function Fan({ fanIn, fanOut }: { fanIn: number; fanOut: number }) {
   return (
-    <span className="flex shrink-0 items-center gap-[6px] text-[10px] font-medium tabular-nums">
-      <span className="text-incoming" title="Distinct files that import this">
+    <Box component="span" className="flex shrink-0 items-center gap-[6px] text-[10px] font-medium tabular-nums">
+      <Box component="span" className="text-incoming" title="Distinct files that import this">
         ←{fanIn}
-      </span>
-      <span className="text-outgoing" title="Distinct files this imports">
+      </Box>
+      <Box component="span" className="text-outgoing" title="Distinct files this imports">
         {fanOut}→
-      </span>
-    </span>
+      </Box>
+    </Box>
   );
 }

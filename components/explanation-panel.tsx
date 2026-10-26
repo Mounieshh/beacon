@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Box, Typography, Button, Skeleton } from "@mui/material";
+import { Box, Typography, Button, Skeleton, Tooltip } from "@mui/material";
 import type { ExplainResult } from "@/app/(workspace)/analyses/[id]/actions";
 import { railLabel } from "@/lib/roles";
+import { MAX_GENERATION_LIMIT } from "@/lib/explanation-session";
 import { ExplanationText } from "./explanation-text";
+import { GenerationTimer } from "./generation-timer";
 import { RerunButton } from "./progress/rerun-button";
 
 export type ExplainTarget = { kind: "file"; path: string } | { kind: "group"; dir: string };
@@ -33,6 +35,7 @@ export function ExplanationPanel(props: {
   commitSha: string;
   state: ExplanationState | undefined;
   freshness: Freshness | undefined;
+  generationCount?: number;
   onExplain: (target: ExplainTarget) => void;
   isPath: (path: string) => boolean;
   renderPath: (path: string) => ReactNode;
@@ -55,9 +58,12 @@ export function ExplanationPanel(props: {
   if (state.status === "loading") {
     return (
       <Box sx={{ px: 1.5, py: 1.5 }}>
-        <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", mb: 1 }}>
-          Explaining {what}…
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+          <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)" }}>
+            Explaining {what}…
+          </Typography>
+          <GenerationTimer expectedSeconds={3} status="loading" />
+        </Box>
         <Skeleton variant="text" sx={{ fontSize: "12px", bgcolor: "var(--line)", opacity: 0.2 }} />
         <Skeleton variant="text" sx={{ fontSize: "12px", bgcolor: "var(--line)", opacity: 0.2 }} />
         <Skeleton variant="text" sx={{ fontSize: "12px", width: "60%", bgcolor: "var(--line)", opacity: 0.2 }} />
@@ -79,11 +85,48 @@ export function ExplanationPanel(props: {
   }
 
   const { result } = state;
+  const count = props.generationCount ?? 1;
+  const isAtLimit = count >= MAX_GENERATION_LIMIT;
+
   return (
     <Box sx={{ px: 1.5, py: 1.5 }}>
       <FreshnessNote freshness={props.freshness} target={target} analysisId={props.analysisId} commitSha={props.commitSha} />
       <ExplanationText text={result.body} isPath={props.isPath} onPath={props.renderPath} />
-      <Box sx={{ mt: 1.5, borderTop: "1px solid var(--line)", pt: 1, fontSize: "10px", color: "var(--fg-muted)", display: "flex", flexDirection: "column", gap: 0.5 }}>
+
+      <Box sx={{ mt: 1.5, pt: 1, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {isAtLimit ? (
+          <Tooltip title="Only certain times will be allowed because free model is used (maximum 2 generations per item)." arrow>
+            <Box component="span" sx={{ display: "inline-block", cursor: "not-allowed" }}>
+              <Button
+                disabled
+                size="small"
+                sx={{
+                  pointerEvents: "none",
+                  borderRadius: "3px",
+                  border: "1px solid var(--line)",
+                  px: 1,
+                  py: 0.25,
+                  height: "auto",
+                  fontSize: "11px",
+                  textTransform: "none",
+                  color: "var(--fg-muted)",
+                  bgcolor: "transparent",
+                  opacity: 0.5,
+                }}
+              >
+                Re-explain (0 remaining)
+              </Button>
+            </Box>
+          </Tooltip>
+        ) : (
+          <ExplainButton
+            label={`Re-explain (${MAX_GENERATION_LIMIT - count} remaining)`}
+            onClick={() => props.onExplain(target)}
+          />
+        )}
+      </Box>
+
+      <Box sx={{ mt: 1.5, pt: 0.5, fontSize: "10px", color: "var(--fg-muted)", display: "flex", flexDirection: "column", gap: 0.5 }}>
         {result.labelled && (
           <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)" }}>
             {result.labelled.role === null
