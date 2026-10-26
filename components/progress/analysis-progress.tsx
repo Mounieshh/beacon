@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Box, Typography } from "@mui/material";
+import { useOrganization } from "@clerk/nextjs";
 import { StateMark } from "@/components/state-mark";
 import { STAGES, STALE_AFTER_MS, type Progress } from "@/lib/pipeline/stages";
 import { RerunButton } from "./rerun-button";
@@ -23,6 +26,11 @@ type Step = "done" | "current" | "failed" | "stale" | "pending";
 export function AnalysisProgress({ analysisId, repository, commitSha, initial, staleAtRender, started }: Props) {
   const { progress, lost, restarted } = useProgress(analysisId, initial);
   const router = useRouter();
+  const { organization } = useOrganization();
+
+  const projectsUrl = organization
+    ? `/dashboard/organization/${encodeURIComponent(organization.slug || organization.name)}/projects`
+    : "/dashboard/organizations";
 
   // Stored is the last stage; once it lands the server has a map to render at
   // this same address, so the page is re-rendered into it.
@@ -43,43 +51,113 @@ export function AnalysisProgress({ analysisId, repository, commitSha, initial, s
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-line px-3 text-xs">
-        <h1 className="font-mono text-[13px]">
-          <span className="text-fg-muted">{repository.owner}/</span>
-          {repository.name}
-        </h1>
+    <Box sx={{ display: "flex", height: "100%", flexDirection: "column" }}>
+      <Box
+        sx={{
+          display: "flex",
+          height: 36,
+          flexShrink: 0,
+          alignItems: "center",
+          gap: 1.5,
+          borderBottom: "1px solid var(--line)",
+          px: 1.5,
+          fontSize: "12px",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Link
+            href={projectsUrl}
+            style={{ textDecoration: "none" }}
+          >
+            <Typography
+              component="span"
+              sx={{
+                fontSize: "13px",
+                color: "var(--fg-muted)",
+                transition: "color 0.1s",
+                "&:hover": { color: "var(--fg)" },
+              }}
+            >
+              Projects
+            </Typography>
+          </Link>
+          <Typography component="span" sx={{ color: "var(--line)", fontSize: "12px" }}>
+            /
+          </Typography>
+          <Typography
+            component="h1"
+            sx={{
+              fontFamily: "var(--font-geist-mono), monospace",
+              fontSize: "13px",
+              lineHeight: 1,
+            }}
+          >
+            <Typography component="span" sx={{ color: "var(--fg-muted)", fontFamily: "inherit", fontSize: "inherit" }}>
+              {repository.owner}/
+            </Typography>
+            <Typography component="span" sx={{ fontWeight: 600, color: "var(--fg)", fontFamily: "inherit", fontSize: "inherit" }}>
+              {repository.name}
+            </Typography>
+          </Typography>
+        </Box>
+
         {commitSha && (
-          <span className="font-mono text-fg-muted" title={commitSha}>
+          <Typography
+            component="span"
+            title={commitSha}
+            sx={{
+              fontFamily: "var(--font-geist-mono), monospace",
+              color: "var(--fg-muted)",
+              fontSize: "12px",
+            }}
+          >
             {commitSha.slice(0, 7)}
-          </span>
+          </Typography>
         )}
-        <span className="flex items-center gap-1.5 text-fg-muted">
+
+        <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 0.75, color: "var(--fg-muted)", fontSize: "12px" }}>
           <StateMark status={progress.status} stale={stale} />
           {stale ? "stale" : progress.status}
-        </span>
-        <span className="ml-auto">{canRerun && <RerunButton analysisId={analysisId} onStarted={restarted} />}</span>
-      </div>
+        </Box>
 
-      <div className="px-3 py-4">
-        <ol className="max-w-2xl text-xs">
+        <Box component="span" sx={{ ml: "auto" }}>
+          {canRerun && <RerunButton analysisId={analysisId} onStarted={restarted} />}
+        </Box>
+      </Box>
+
+      <Box sx={{ px: 1.5, py: 2 }}>
+        <Box component="ol" sx={{ maxWidth: 672, fontSize: "12px", listStyle: "none", p: 0, m: 0 }}>
           {STAGES.map(({ stage, label }, i) => {
             const state = step(i);
             const detail = state === "current" || state === "failed" || state === "stale" ? progress.message : null;
             return (
-              <li key={stage} className="grid grid-cols-[1rem_7rem_minmax(0,1fr)] items-baseline gap-x-2 py-1">
-                <span className={state === "pending" ? "text-line" : "text-fg"}>
+              <Box
+                component="li"
+                key={stage}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1rem 7rem minmax(0, 1fr)",
+                  alignItems: "baseline",
+                  columnGap: 1,
+                  py: 0.5,
+                }}
+              >
+                <Box component="span" sx={{ color: state === "pending" ? "var(--line)" : "var(--fg)" }}>
                   <StepMark state={state} />
-                </span>
-                <span className={state === "pending" ? "text-fg-muted" : "text-fg"}>{label}</span>
-                <span className={state === "failed" ? "text-fg" : "text-fg-muted"}>{detail}</span>
-              </li>
+                </Box>
+                <Typography component="span" sx={{ fontSize: "12px", color: state === "pending" ? "var(--fg-muted)" : "var(--fg)" }}>
+                  {label}
+                </Typography>
+                <Typography component="span" sx={{ fontSize: "12px", color: state === "failed" ? "var(--fg)" : "var(--fg-muted)" }}>
+                  {detail}
+                </Typography>
+              </Box>
             );
           })}
-        </ol>
+        </Box>
 
         {stale && (
-          <p className="mt-3 max-w-2xl text-xs text-fg-muted">
+          <Typography sx={{ mt: 1.5, maxWidth: 672, fontSize: "12px", color: "var(--fg-muted)" }}>
             No progress for over {STALE_AFTER_MS / 60000} minutes
             {started && (
               <>
@@ -91,16 +169,20 @@ export function AnalysisProgress({ analysisId, repository, commitSha, initial, s
               </>
             )}
             . The process running it has most likely stopped; re-run to start again.
-          </p>
+          </Typography>
         )}
-        {complete && progress.message && <p className="mt-3 text-xs text-fg">{progress.message} — opening the map…</p>}
+        {complete && progress.message && (
+          <Typography sx={{ mt: 1.5, fontSize: "12px", color: "var(--fg)" }}>
+            {progress.message} — opening the map…
+          </Typography>
+        )}
         {lost && (
-          <p className="mt-3 max-w-2xl text-xs text-fg">
+          <Typography sx={{ mt: 1.5, maxWidth: 672, fontSize: "12px", color: "var(--fg)" }}>
             Live updates stopped ({lost}). Reload to see where the run is.
-          </p>
+          </Typography>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

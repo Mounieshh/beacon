@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Box, Typography } from "@mui/material";
 
 // The prompt permits three pieces of formatting: inline code, bullets and
 // bold. This renders exactly those. Anything else a model slips in anyway is
@@ -13,24 +14,48 @@ const BULLET = /^\s*(?:[-*•+]|\d+[.)])\s+/;
 const HEADING = /^\s*#{1,6}\s+/;
 const FENCE = /^\s*```/;
 
-export function ExplanationText({ text, isPath, onPath }: { text: string; isPath: (path: string) => boolean; onPath: (path: string) => ReactNode }) {
+export function ExplanationText({
+  text,
+  isPath,
+  onPath,
+}: {
+  text: string;
+  isPath: (path: string) => boolean;
+  onPath: (path: string) => ReactNode;
+}) {
   const inline = (s: string) => renderInline(s, isPath, onPath);
   return (
-    <div className="space-y-2 text-[12px] leading-[18px]">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, fontSize: "12px", lineHeight: "18px" }}>
       {blocks(text).map((b, i) =>
         b.kind === "paragraph" ? (
-          <p key={i}>{inline(b.text)}</p>
+          <Typography key={i} sx={{ fontSize: "12px", lineHeight: "18px", color: "var(--fg)" }}>
+            {inline(b.text)}
+          </Typography>
         ) : (
-          <ul key={i} className="space-y-0.5 pl-3">
+          <Box component="ul" key={i} sx={{ display: "flex", flexDirection: "column", gap: 0.5, pl: 1.5, listStyle: "none", m: 0 }}>
             {b.items.map((item, j) => (
-              <li key={j} className="relative before:absolute before:-left-2.5 before:text-fg-muted before:content-['–']">
+              <Box
+                component="li"
+                key={j}
+                sx={{
+                  position: "relative",
+                  fontSize: "12px",
+                  lineHeight: "18px",
+                  "&::before": {
+                    position: "absolute",
+                    left: -10,
+                    color: "var(--fg-muted)",
+                    content: "'–'",
+                  },
+                }}
+              >
                 {inline(item)}
-              </li>
+              </Box>
             ))}
-          </ul>
+          </Box>
         ),
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -83,18 +108,28 @@ function renderInline(text: string, isPath: (path: string) => boolean, onPath: (
       const inner = code.trim();
       out.push(
         isPath(inner) ? (
-          <span key={`c${at}`}>{onPath(inner)}</span>
+          <Box component="span" key={`c${at}`}>{onPath(inner)}</Box>
         ) : (
-          <code key={`c${at}`} className="rounded-[2px] bg-raised px-1 font-mono text-[11px]">
+          <Box
+            component="code"
+            key={`c${at}`}
+            sx={{
+              borderRadius: "2px",
+              bgcolor: "var(--raised)",
+              px: 0.5,
+              fontFamily: "var(--font-geist-mono), monospace",
+              fontSize: "11px",
+            }}
+          >
             {inner}
-          </code>
+          </Box>
         ),
       );
     } else {
       out.push(
-        <strong key={`b${at}`} className="font-semibold">
+        <Box component="strong" key={`b${at}`} sx={{ fontWeight: 600 }}>
           {renderInline(bold ?? boldAlt ?? "", isPath, onPath)}
-        </strong>,
+        </Box>,
       );
     }
     last = at + m[0].length;
@@ -115,11 +150,11 @@ function plain(text: string, isPath: (path: string) => boolean, onPath: (path: s
     const core = match?.[2] ?? word;
     if (core && core.length > 2 && isPath(core)) {
       return (
-        <span key={`p${n}-${i}`}>
+        <Box component="span" key={`p${n}-${i}`}>
           {match?.[1]}
           {onPath(core)}
           {match?.[3]}
-        </span>
+        </Box>
       );
     }
     return word;

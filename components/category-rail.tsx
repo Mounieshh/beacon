@@ -1,3 +1,4 @@
+import { Box, Typography, ButtonBase } from "@mui/material";
 import { railCategories, railLabel, type ModelRole, type RailKey } from "@/lib/roles";
 import type { ParsedFile } from "@/lib/parser/types";
 
@@ -25,32 +26,66 @@ export function CategoryRail({
     frameworks,
     files.map((f) => f.role ?? modelRoles.get(f.path) ?? null),
   );
+
   return (
-    <div className="py-2">
-      <h2 className="px-3 pb-1 text-[11px] text-fg-muted">
-        Categories <span className="tabular-nums">· {files.length} files</span>
-      </h2>
-      <ul>
+    <Box sx={{ py: 1 }}>
+      <Typography
+        component="h2"
+        sx={{
+          px: 1.5,
+          pb: 0.5,
+          fontSize: "11px",
+          color: "var(--fg-muted)",
+        }}
+      >
+        Categories{" "}
+        <Typography component="span" sx={{ fontVariantNumeric: "tabular-nums", fontSize: "inherit", color: "inherit" }}>
+          · {files.length} files
+        </Typography>
+      </Typography>
+
+      <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
         {categories.map(({ key, count }) => {
           const on = active === key;
           return (
-            <li key={key}>
-              <button
-                type="button"
+            <Box component="li" key={key}>
+              <ButtonBase
                 aria-pressed={on}
                 disabled={count === 0}
                 onClick={() => onToggle(key)}
-                className={`flex h-6 w-full items-center gap-2 px-3 text-left text-xs disabled:text-fg-muted ${
-                  on ? "bg-accent/15 shadow-[inset_2px_0_0_var(--accent)]" : active ? "text-fg-muted enabled:hover:bg-raised" : "enabled:hover:bg-raised"
-                }`}
+                sx={{
+                  display: "flex",
+                  height: 24,
+                  width: "100%",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  textAlign: "left",
+                  fontSize: "12px",
+                  justifyContent: "space-between",
+                  bgcolor: on ? "rgba(59, 130, 246, 0.15)" : "transparent",
+                  boxShadow: on ? "inset 2px 0 0 var(--accent)" : "none",
+                  color: on ? "var(--fg)" : active ? "var(--fg-muted)" : "var(--fg)",
+                  "&:hover:not(.Mui-disabled)": {
+                    bgcolor: "var(--raised)",
+                  },
+                  "&.Mui-disabled": {
+                    color: "var(--fg-muted)",
+                    opacity: 0.6,
+                  },
+                }}
               >
-                <span className="flex-1 truncate">{railLabel(key)}</span>
-                <span className="text-fg-muted tabular-nums">{count}</span>
-              </button>
-            </li>
+                <Typography component="span" sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "12px", textAlign: "left" }}>
+                  {railLabel(key)}
+                </Typography>
+                <Typography component="span" sx={{ fontSize: "12px", color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
+                  {count}
+                </Typography>
+              </ButtonBase>
+            </Box>
           );
         })}
-      </ul>
-    </div>
+      </Box>
+    </Box>
   );
 }

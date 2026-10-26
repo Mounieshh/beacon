@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Box } from "@mui/material";
 
 // The one layout every analysis renders into. Column positions and widths are
 // fixed here and nowhere else: later phases fill the columns, they don't move
@@ -6,16 +7,50 @@ import type { ReactNode } from "react";
 // covers the map.
 export function Shell({ rail, map, detail }: { rail?: ReactNode; map?: ReactNode; detail?: ReactNode }) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[11rem_minmax(0,1fr)_20rem]">
-      <nav aria-label="Categories" className="min-h-0 overflow-y-auto border-r border-line bg-surface">
+    <Box
+      sx={{
+        display: "grid",
+        minHeight: 0,
+        flex: 1,
+        gridTemplateColumns: "11rem minmax(0, 1fr) 20rem",
+      }}
+    >
+      <Box
+        component="nav"
+        aria-label="Categories"
+        sx={{
+          minHeight: 0,
+          overflowY: "auto",
+          borderRight: "1px solid var(--line)",
+          bgcolor: "var(--surface)",
+        }}
+      >
         {rail}
-      </nav>
-      <section aria-label="Map" className="relative min-h-0 min-w-0 bg-canvas">
+      </Box>
+      <Box
+        component="section"
+        aria-label="Map"
+        sx={{
+          position: "relative",
+          minHeight: 0,
+          minWidth: 0,
+          bgcolor: "var(--canvas)",
+        }}
+      >
         {map}
-      </section>
-      <aside aria-label="Details" className="min-h-0 overflow-y-auto border-l border-line bg-surface">
+      </Box>
+      <Box
+        component="aside"
+        aria-label="Details"
+        sx={{
+          minHeight: 0,
+          overflowY: "auto",
+          borderLeft: "1px solid var(--line)",
+          bgcolor: "var(--surface)",
+        }}
+      >
         {detail}
-      </aside>
-    </div>
+      </Box>
+    </Box>
   );
 }

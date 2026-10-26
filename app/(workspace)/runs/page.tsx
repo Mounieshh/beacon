@@ -1,5 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { connection } from "next/server";
+import {
+  Box,
+  Typography,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+} from "@mui/material";
 import { AnalysisRow, type RowData } from "@/components/progress/analysis-row";
 import { StateMark } from "@/components/state-mark";
 import { SubmitForm } from "@/components/submit-form";
@@ -30,60 +40,123 @@ export default async function RunsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-4 border-b border-line px-3">
-        <h1 className="text-[13px] font-semibold">{orgName}</h1>
-        <span className="text-xs text-fg-muted tabular-nums">
+    <Box sx={{ display: "flex", height: "100%", flexDirection: "column" }}>
+      <Box
+        sx={{
+          display: "flex",
+          height: 36,
+          flexShrink: 0,
+          alignItems: "center",
+          gap: 2,
+          borderBottom: "1px solid var(--line)",
+          px: 1.5,
+        }}
+      >
+        <Typography component="h1" sx={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)" }}>
+          {orgName}
+        </Typography>
+
+        <Typography
+          component="span"
+          sx={{
+            fontSize: "12px",
+            color: "var(--fg-muted)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {rows.length === LIST_LIMIT
             ? `Latest ${LIST_LIMIT} analyses`
             : `${rows.length} ${rows.length === 1 ? "analysis" : "analyses"}`}
-        </span>
+        </Typography>
+
         <SubmitForm />
+
         {rows.length > 0 && (
-          <ul className="ml-auto flex items-center gap-3 text-xs text-fg-muted tabular-nums">
+          <Box
+            component="ul"
+            sx={{
+              ml: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              fontSize: "12px",
+              color: "var(--fg-muted)",
+              fontVariantNumeric: "tabular-nums",
+              listStyle: "none",
+              p: 0,
+              m: 0,
+            }}
+          >
             {TALLY_ORDER.filter((s) => counts.has(s)).map((s) => (
-              <li key={s} className="flex items-center gap-1.5">
+              <Box component="li" key={s} sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                 <StateMark status={s === "stale" ? "running" : s} stale={s === "stale"} />
                 {counts.get(s)} {s}
-              </li>
+              </Box>
             ))}
-          </ul>
+          </Box>
         )}
-      </div>
+      </Box>
 
       {rows.length === 0 ? (
-        <div className="px-3 py-10 text-xs text-fg-muted">
-          <p className="text-fg">No analyses yet.</p>
-          <p className="mt-1">Paste a public GitHub repository above to map it.</p>
-        </div>
+        <Box sx={{ px: 1.5, py: 5, fontSize: "12px", color: "var(--fg-muted)" }}>
+          <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>No analyses yet.</Typography>
+          <Typography sx={{ fontSize: "12px", color: "var(--fg-muted)", mt: 0.5 }}>
+            Paste a public GitHub repository above to map it.
+          </Typography>
+        </Box>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full table-fixed border-collapse text-xs">
+        <TableContainer sx={{ minHeight: 0, flex: 1, overflow: "auto" }}>
+          <Table
+            size="small"
+            sx={{
+              width: "100%",
+              tableLayout: "fixed",
+              borderCollapse: "collapse",
+              fontSize: "12px",
+            }}
+          >
             <colgroup>
               <col />
-              <col className="w-28" />
-              <col className="hidden w-20 sm:table-column" />
-              <col className="w-20" />
-              <col className="hidden w-20 sm:table-column" />
+              <col style={{ width: 112 }} />
+              <col style={{ width: 80 }} className="hidden sm:table-column" />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 80 }} className="hidden sm:table-column" />
             </colgroup>
-            <thead className="sticky top-0 bg-canvas text-left text-fg-muted">
-              <tr className="h-7 border-b border-line">
-                <th className="px-3 font-normal">Repository</th>
-                <th className="px-3 font-normal">State</th>
-                <th className="hidden px-3 font-normal sm:table-cell">Commit</th>
-                <th className="px-3 text-right font-normal">Started</th>
-                <th className="hidden px-3 text-right font-normal sm:table-cell">Finished</th>
-              </tr>
-            </thead>
-            <tbody>
+            <TableHead
+              sx={{
+                position: "sticky",
+                top: 0,
+                bgcolor: "var(--canvas)",
+                zIndex: 1,
+              }}
+            >
+              <TableRow sx={{ height: 28, borderBottom: "1px solid var(--line)" }}>
+                <TableCell sx={{ px: 1.5, py: 0.5, fontSize: "12px", fontWeight: 400, color: "var(--fg-muted)", borderColor: "var(--line)" }}>
+                  Repository
+                </TableCell>
+                <TableCell sx={{ px: 1.5, py: 0.5, fontSize: "12px", fontWeight: 400, color: "var(--fg-muted)", borderColor: "var(--line)" }}>
+                  State
+                </TableCell>
+                <TableCell className="hidden sm:table-cell" sx={{ px: 1.5, py: 0.5, fontSize: "12px", fontWeight: 400, color: "var(--fg-muted)", borderColor: "var(--line)" }}>
+                  Commit
+                </TableCell>
+                <TableCell align="right" sx={{ px: 1.5, py: 0.5, fontSize: "12px", fontWeight: 400, color: "var(--fg-muted)", borderColor: "var(--line)" }}>
+                  Started
+                </TableCell>
+                <TableCell className="hidden sm:table-cell" align="right" sx={{ px: 1.5, py: 0.5, fontSize: "12px", fontWeight: 400, color: "var(--fg-muted)", borderColor: "var(--line)" }}>
+                  Finished
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {rows.map((row) => (
                 <AnalysisRow key={row.id} row={row} />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Box>
   );
 }
 

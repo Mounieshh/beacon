@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TableRow, TableCell, Box, Typography } from "@mui/material";
 import { StateMark } from "@/components/state-mark";
 import { STALE_AFTER_MS, type Progress } from "@/lib/pipeline/stages";
 import { sameProgress, useProgress } from "./use-progress";
@@ -25,42 +26,122 @@ export function AnalysisRow({ row }: { row: RowData }) {
   const note = progress.status === "complete" ? null : progress.message;
 
   return (
-    <tr className="border-b border-line align-top hover:bg-raised">
-      <td className="truncate px-3 py-1.5 font-mono">
+    <TableRow
+      sx={{
+        borderBottom: "1px solid var(--line)",
+        verticalAlign: "top",
+        transition: "background-color 0.1s",
+        "&:hover": {
+          bgcolor: "var(--raised)",
+        },
+      }}
+    >
+      <TableCell
+        sx={{
+          px: 1.5,
+          py: 0.75,
+          borderColor: "var(--line)",
+          fontFamily: "var(--font-geist-mono), monospace",
+          fontSize: "12px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
         <Link href={`/analyses/${row.id}`} className="block">
           {row.repository ? (
             <>
-              <span className="text-fg-muted">{row.repository.owner}/</span>
-              {row.repository.name}
+              <Typography component="span" sx={{ fontSize: "12px", color: "var(--fg-muted)", fontFamily: "inherit" }}>
+                {row.repository.owner}/
+              </Typography>
+              <Typography component="span" sx={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)", fontFamily: "inherit" }}>
+                {row.repository.name}
+              </Typography>
             </>
           ) : (
-            <span className="text-fg-muted">—</span>
+            <Typography component="span" sx={{ fontSize: "12px", color: "var(--fg-muted)", fontFamily: "inherit" }}>
+              —
+            </Typography>
           )}
           {note && (
-            <span className="mt-0.5 block truncate font-sans text-fg-muted" title={note}>
+            <Typography
+              component="span"
+              title={note}
+              sx={{
+                mt: 0.5,
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                fontFamily: "var(--font-geist-sans), sans-serif",
+                fontSize: "12px",
+                color: "var(--fg-muted)",
+              }}
+            >
               {stale ? `No progress for over ${STALE_AFTER_MS / 60000} minutes — ${note}` : note}
-            </span>
+            </Typography>
           )}
         </Link>
-      </td>
-      <td className="px-3 py-1.5">
-        <span className={`flex items-center gap-1.5 ${progress.status === "queued" ? "text-fg-muted" : "text-fg"}`}>
+      </TableCell>
+      <TableCell sx={{ px: 1.5, py: 0.75, borderColor: "var(--line)", fontSize: "12px" }}>
+        <Box
+          component="span"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.75,
+            color: progress.status === "queued" ? "var(--fg-muted)" : "var(--fg)",
+          }}
+        >
           <StateMark status={progress.status} stale={stale} />
           {stale ? "stale" : progress.status}
           {progress.status === "running" && !stale && progress.stage && (
-            <span className="text-fg-muted">· {progress.stage}</span>
+            <Typography component="span" sx={{ fontSize: "12px", color: "var(--fg-muted)" }}>
+              · {progress.stage}
+            </Typography>
           )}
-        </span>
-      </td>
-      <td className="hidden px-3 py-1.5 font-mono text-fg-muted sm:table-cell">
+        </Box>
+      </TableCell>
+      <TableCell
+        className="hidden sm:table-cell"
+        sx={{
+          px: 1.5,
+          py: 0.75,
+          borderColor: "var(--line)",
+          fontFamily: "var(--font-geist-mono), monospace",
+          fontSize: "12px",
+          color: "var(--fg-muted)",
+        }}
+      >
         {row.commitSha ? <span title={row.commitSha}>{row.commitSha.slice(0, 7)}</span> : "—"}
-      </td>
-      <td className="px-3 py-1.5 text-right text-fg-muted tabular-nums">
+      </TableCell>
+      <TableCell
+        align="right"
+        sx={{
+          px: 1.5,
+          py: 0.75,
+          borderColor: "var(--line)",
+          fontSize: "12px",
+          fontVariantNumeric: "tabular-nums",
+          color: "var(--fg-muted)",
+        }}
+      >
         <time dateTime={row.created.iso} title={row.created.iso}>
           {row.created.ago}
         </time>
-      </td>
-      <td className="hidden px-3 py-1.5 text-right text-fg-muted tabular-nums sm:table-cell">
+      </TableCell>
+      <TableCell
+        className="hidden sm:table-cell"
+        align="right"
+        sx={{
+          px: 1.5,
+          py: 0.75,
+          borderColor: "var(--line)",
+          fontSize: "12px",
+          fontVariantNumeric: "tabular-nums",
+          color: "var(--fg-muted)",
+        }}
+      >
         {row.finished ? (
           <time dateTime={row.finished.iso} title={row.finished.iso}>
             {row.finished.ago}
@@ -70,7 +151,7 @@ export function AnalysisRow({ row }: { row: RowData }) {
         ) : (
           "—"
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

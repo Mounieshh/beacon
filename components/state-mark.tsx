@@ -1,3 +1,4 @@
+import { SvgIcon } from "@mui/material";
 import type { Status } from "@/lib/pipeline/stages";
 
 // State is carried by shape, not hue: green, amber and blue already mean
@@ -6,7 +7,11 @@ import type { Status } from "@/lib/pipeline/stages";
 // is broken, because nothing is holding it any more.
 export function StateMark({ status, stale = false }: { status: Status; stale?: boolean }) {
   return (
-    <svg viewBox="0 0 10 10" className="size-2.5 shrink-0" aria-hidden="true">
+    <SvgIcon
+      viewBox="0 0 10 10"
+      aria-hidden="true"
+      sx={{ width: 10, height: 10, fontSize: "10px !important", flexShrink: 0, color: "currentColor" }}
+    >
       {status === "complete" ? (
         <circle cx="5" cy="5" r="4.5" fill="currentColor" />
       ) : (
@@ -22,6 +27,6 @@ export function StateMark({ status, stale = false }: { status: Status; stale?: b
       )}
       {status === "running" && !stale && <path d="M5 1 A4 4 0 0 1 5 9 Z" fill="currentColor" />}
       {status === "failed" && <path d="M2.2 2.2 L7.8 7.8 M7.8 2.2 L2.2 7.8" stroke="currentColor" strokeWidth="1" />}
-    </svg>
+    </SvgIcon>
   );
 }

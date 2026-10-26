@@ -3,6 +3,7 @@
 import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import { resolveOrganization } from "./actions";
 
 export function Activate() {
@@ -22,8 +23,15 @@ export function Activate() {
   }, [setActive, router]);
 
   return error ? (
-    <p className="text-xs text-fg">Couldn&apos;t set up an organization: {error}</p>
+    <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>
+      Couldn&apos;t set up an organization: {error}
+    </Typography>
   ) : (
-    <p className="text-xs text-fg-muted">Setting up your organization…</p>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      <CircularProgress size={16} sx={{ color: "var(--fg-muted)" }} />
+      <Typography sx={{ fontSize: "12px", color: "var(--fg-muted)" }}>
+        Setting up your organization…
+      </Typography>
+    </Box>
   );
 }

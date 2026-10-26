@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Box } from "@mui/material";
 import { Activate } from "./activate";
 
 export default async function StartPage() {
@@ -7,8 +8,8 @@ export default async function StartPage() {
   if (orgId) redirect("/");
 
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <Box sx={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
       <Activate />
-    </div>
+    </Box>
   );
 }

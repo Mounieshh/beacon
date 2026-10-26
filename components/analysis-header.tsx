@@ -1,25 +1,95 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Box, Typography } from "@mui/material";
+import { useOrganization } from "@clerk/nextjs";
 import { RerunButton } from "./progress/rerun-button";
 
 // Above the shell, not in it: the map's columns stay where they are. Re-running
 // hands the page back to the progress view, which the server renders once the
 // row says running.
-export function AnalysisHeader({ analysisId, repository, commitSha }: { analysisId: string; repository: { owner: string; name: string }; commitSha: string }) {
+export function AnalysisHeader({
+  analysisId,
+  repository,
+  commitSha,
+}: {
+  analysisId: string;
+  repository: { owner: string; name: string };
+  commitSha: string;
+}) {
   const router = useRouter();
+  const { organization } = useOrganization();
+
+  const projectsUrl = organization
+    ? `/dashboard/organization/${encodeURIComponent(organization.slug || organization.name)}/projects`
+    : "/dashboard/organizations";
+
   return (
-    <div className="flex h-9 shrink-0 items-center gap-3 border-b border-line px-3 text-xs">
-      <h1 className="font-mono text-[13px]">
-        <span className="text-fg-muted">{repository.owner}/</span>
-        {repository.name}
-      </h1>
-      <span className="font-mono text-fg-muted" title={commitSha}>
+    <Box
+      sx={{
+        display: "flex",
+        height: 36,
+        flexShrink: 0,
+        alignItems: "center",
+        gap: 1.5,
+        borderBottom: "1px solid var(--line)",
+        px: 1.5,
+        fontSize: "12px",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Link
+          href={projectsUrl}
+          style={{ textDecoration: "none" }}
+        >
+          <Typography
+            component="span"
+            sx={{
+              fontSize: "13px",
+              color: "var(--fg-muted)",
+              transition: "color 0.1s",
+              "&:hover": { color: "var(--fg)" },
+            }}
+          >
+            Projects
+          </Typography>
+        </Link>
+        <Typography component="span" sx={{ color: "var(--line)", fontSize: "12px" }}>
+          /
+        </Typography>
+        <Typography
+          component="h1"
+          sx={{
+            fontFamily: "var(--font-geist-mono), monospace",
+            fontSize: "13px",
+            lineHeight: 1,
+          }}
+        >
+          <Typography component="span" sx={{ color: "var(--fg-muted)", fontFamily: "inherit", fontSize: "inherit" }}>
+            {repository.owner}/
+          </Typography>
+          <Typography component="span" sx={{ fontWeight: 600, color: "var(--fg)", fontFamily: "inherit", fontSize: "inherit" }}>
+            {repository.name}
+          </Typography>
+        </Typography>
+      </Box>
+
+      <Typography
+        component="span"
+        title={commitSha}
+        sx={{
+          fontFamily: "var(--font-geist-mono), monospace",
+          color: "var(--fg-muted)",
+          fontSize: "12px",
+        }}
+      >
         {commitSha.slice(0, 7)}
-      </span>
-      <span className="ml-auto">
+      </Typography>
+
+      <Box component="span" sx={{ ml: "auto" }}>
         <RerunButton analysisId={analysisId} onStarted={() => router.refresh()} />
-      </span>
-    </div>
+      </Box>
+    </Box>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ToggleButtonGroup, ToggleButton } from "@mui/material";
 import { THEME_COOKIE, THEMES, type Theme } from "@/lib/theme";
 
 function applyTheme(theme: Theme) {
@@ -11,31 +12,50 @@ function applyTheme(theme: Theme) {
 export function ThemeControl({ initial }: { initial: Theme }) {
   const [theme, setTheme] = useState<Theme>(initial);
 
-  function choose(next: Theme) {
+  function choose(_: React.MouseEvent<HTMLElement>, next: Theme | null) {
+    if (!next) return;
     setTheme(next);
     applyTheme(next);
   }
 
   return (
-    <div
-      role="radiogroup"
+    <ToggleButtonGroup
+      value={theme}
+      exclusive
+      onChange={choose}
       aria-label="Theme"
-      className="flex h-6 items-center rounded border border-line text-[0.6875rem]"
+      size="small"
+      sx={{
+        height: 24,
+        border: "1px solid var(--line)",
+        borderRadius: "4px",
+        "& .MuiToggleButtonGroup-grouped": {
+          border: 0,
+          borderRadius: 0,
+          px: 1,
+          py: 0,
+          height: "100%",
+          fontSize: "11px",
+          textTransform: "none",
+          fontWeight: 400,
+          color: "var(--fg-muted)",
+          "&.Mui-selected": {
+            bgcolor: "var(--raised)",
+            color: "var(--fg)",
+            fontWeight: 500,
+          },
+          "&:hover": {
+            bgcolor: "var(--raised)",
+            color: "var(--fg)",
+          },
+        },
+      }}
     >
       {THEMES.map((t) => (
-        <button
-          key={t}
-          type="button"
-          role="radio"
-          aria-checked={theme === t}
-          onClick={() => choose(t)}
-          className={`h-full px-2 first:rounded-l last:rounded-r ${
-            theme === t ? "bg-raised text-fg" : "text-fg-muted hover:text-fg"
-          }`}
-        >
+        <ToggleButton key={t} value={t} aria-label={t}>
           {t}
-        </button>
+        </ToggleButton>
       ))}
-    </div>
+    </ToggleButtonGroup>
   );
 }
