@@ -1,8 +1,5 @@
 <div align="center">
-  <br />
-  <img src="public/readme/readme-hero.webp" alt="Project Banner">
-  <br />
-  <br />
+  <h1>Beacon | AI-Powered Codebase Dependency Mapper</h1>
 
   <div>
     <img src="https://img.shields.io/badge/-Next.js_-black?style=for-the-badge&logo=nextdotjs&logoColor=white" />
@@ -15,8 +12,6 @@
     <img src="https://img.shields.io/badge/-OpenRouter-6566F1?style=for-the-badge&logo=openai&logoColor=white" />
   </div>
 </div>
-
-## Beacon | AI-Powered Codebase Dependency Mapper
 
 ## 📋 <a name="table">Table of Contents</a>
 
