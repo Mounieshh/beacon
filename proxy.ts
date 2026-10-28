@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublic = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
+const isPublic = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
 
 // Protection happens here, before any route renders, so a signed-out visitor
 // gets a redirect and never receives the page's HTML.
