@@ -17,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Beacon",
-  description: "Dependency maps of public GitHub repositories",
+  title: "Beacon | AI-Powered Codebase Dependency Mapper",
+  description:
+    "Turn TypeScript & JavaScript repositories into deterministic dependency graphs with blast radius analysis and automated security audits.",
 };
 
 // Clerk's components read concrete colors based on active theme so contrast

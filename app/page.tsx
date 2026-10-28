@@ -16,7 +16,15 @@ export default async function LandingPage() {
   const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--canvas)] text-[var(--fg)] selection:bg-[var(--accent)] selection:text-[var(--accent-fg)]">
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[var(--canvas)] text-[var(--fg)] selection:bg-[var(--accent)] selection:text-[var(--accent-fg)]">
+      {/* Ambient background glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
+      >
+        <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[var(--accent)] to-[var(--outgoing)] opacity-15 sm:left-[calc(50%-25rem)] sm:w-[68rem]" />
+      </div>
+
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[var(--surface)]/80 px-4 backdrop-blur-md sm:px-8">
         <div className="flex items-center gap-2.5">
@@ -83,7 +91,7 @@ export default async function LandingPage() {
           Explore complex module relationships, calculate change impact before merging, and detect reachable vulnerabilities with zero AI hallucinations.
         </p>
 
-        {/* Call to action button: Get Started Free only */}
+        {/* Call to action button */}
         <div className="mt-8 flex items-center justify-center">
           {userId ? (
             <Link
@@ -104,8 +112,28 @@ export default async function LandingPage() {
           )}
         </div>
 
+        {/* Core Pillars Strip */}
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 border-y border-[var(--line)]/60 py-3.5 text-[11px] text-[var(--fg-muted)] sm:gap-10">
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--incoming)]" />
+            <span>Deterministic AST Parsing</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--accent)]" />
+            <span>Clerk Multi-Tenant Organizations</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--outgoing)]" />
+            <span>Postgres Row-Level Security</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[#ef4444]" />
+            <span>Zero AI Hallucinations</span>
+          </div>
+        </div>
+
         {/* Feature Cards Grid */}
-        <div className="mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 text-left sm:grid-cols-3">
+        <div className="mt-16 grid w-full max-w-4xl grid-cols-1 gap-4 text-left sm:grid-cols-3">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 transition-shadow hover:shadow-sm">
             <div className="mb-3 flex size-8 items-center justify-center rounded bg-[var(--raised)] text-[var(--accent)]">
               <HubIcon sx={{ fontSize: 18 }} />
