@@ -77,3 +77,93 @@ body {
   stroke-linecap: round;
   fill: none;
 }
+
+/*
+ * Clerk Authentication Component Styles
+ * Ensures the auth card, inputs, buttons, and footer match the active theme
+ * (light, dark, or system preference) without stark white card flashes.
+ */
+.cl-rootBox {
+  display: flex;
+  justify-content: center;
+}
+
+.cl-card,
+.cl-signIn-root .cl-card,
+.cl-signUp-root .cl-card {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--fg) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.cl-headerTitle {
+  color: var(--fg) !important;
+}
+
+.cl-headerSubtitle {
+  color: var(--fg-muted) !important;
+}
+
+.cl-socialButtonsBlockButton {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--fg) !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  background-color: var(--raised) !important;
+}
+
+.cl-socialButtonsBlockButtonText {
+  color: var(--fg) !important;
+}
+
+.cl-dividerLine {
+  background-color: var(--line) !important;
+}
+
+.cl-dividerText {
+  color: var(--fg-muted) !important;
+}
+
+.cl-formFieldLabel {
+  color: var(--fg) !important;
+}
+
+.cl-formFieldInput {
+  background-color: var(--canvas) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--fg) !important;
+}
+
+.cl-formFieldInput:focus {
+  border-color: var(--accent) !important;
+  outline: none;
+}
+
+.cl-formButtonPrimary {
+  background-color: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
+
+.cl-footer,
+.cl-footerAction,
+.cl-footerActionText {
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  color: var(--fg-muted) !important;
+}
+
+.cl-footerActionLink {
+  color: var(--accent) !important;
+}
+
+.cl-identityPreviewText {
+  color: var(--fg) !important;
+}
+
+.cl-identityPreviewEditButton {
+  color: var(--accent) !important;
+}
+
