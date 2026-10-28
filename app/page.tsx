@@ -30,14 +30,14 @@ export default async function LandingPage() {
         </div>
 
         {/* Top Right Controls: Theme + Auth Buttons */}
-        <div className="flex items-center gap-3">
-          <ThemeControl initial={theme} />
+        <div className="flex items-center gap-2.5">
+          <ThemeControl initial={theme} height={32} />
 
           {userId ? (
             <div className="flex items-center gap-2">
               <Link
                 href="/dashboard/organizations"
-                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3 text-[12px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3.5 text-[12px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
               >
                 Go to Dashboard
                 <ArrowForwardIcon sx={{ fontSize: 13 }} />
@@ -48,13 +48,13 @@ export default async function LandingPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/sign-in"
-                className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--fg)] transition-colors hover:bg-[var(--raised)]"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12px] font-medium text-[var(--fg)] shadow-xs transition-colors hover:bg-[var(--raised)]"
               >
                 Log In
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex h-8 items-center justify-center rounded-md bg-[var(--accent)] px-3 text-[12px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
+                className="inline-flex h-8 items-center justify-center rounded-md bg-[var(--accent)] px-3.5 text-[12px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
               >
                 Sign Up
               </Link>
@@ -83,32 +83,24 @@ export default async function LandingPage() {
           Explore complex module relationships, calculate change impact before merging, and detect reachable vulnerabilities with zero AI hallucinations.
         </p>
 
-        {/* Call to action buttons */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        {/* Call to action button: Get Started Free only */}
+        <div className="mt-8 flex items-center justify-center">
           {userId ? (
             <Link
               href="/dashboard/organizations"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-5 text-[13px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-6 text-[13px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
             >
               Open Your Dashboard
               <ArrowForwardIcon sx={{ fontSize: 15 }} />
             </Link>
           ) : (
-            <>
-              <Link
-                href="/sign-up"
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-5 text-[13px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
-              >
-                Get Started Free
-                <ArrowForwardIcon sx={{ fontSize: 15 }} />
-              </Link>
-              <Link
-                href="/sign-in"
-                className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-5 text-[13px] font-medium text-[var(--fg)] transition-colors hover:bg-[var(--raised)]"
-              >
-                Log In
-              </Link>
-            </>
+            <Link
+              href="/sign-up"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-6 text-[13px] font-medium text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90"
+            >
+              Get Started Free
+              <ArrowForwardIcon sx={{ fontSize: 15 }} />
+            </Link>
           )}
         </div>
 

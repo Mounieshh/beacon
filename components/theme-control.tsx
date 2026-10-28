@@ -9,7 +9,7 @@ function applyTheme(theme: Theme) {
   document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=31536000; samesite=lax`;
 }
 
-export function ThemeControl({ initial }: { initial: Theme }) {
+export function ThemeControl({ initial, height = 24 }: { initial: Theme; height?: number }) {
   const [theme, setTheme] = useState<Theme>(initial);
 
   function choose(_: React.MouseEvent<HTMLElement>, next: Theme | null) {
@@ -26,9 +26,9 @@ export function ThemeControl({ initial }: { initial: Theme }) {
       aria-label="Theme"
       size="small"
       sx={{
-        height: 24,
+        height,
         border: "1px solid var(--line)",
-        borderRadius: "4px",
+        borderRadius: "6px",
         "& .MuiToggleButtonGroup-grouped": {
           border: 0,
           borderRadius: 0,
