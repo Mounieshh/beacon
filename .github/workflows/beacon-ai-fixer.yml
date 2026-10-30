@@ -28,7 +28,7 @@ jobs:
         github.event.issue.author_association == 'COLLABORATOR' ||
         github.event.issue.author_association == 'MEMBER'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     permissions:
       contents: write
       pull-requests: write
@@ -67,29 +67,55 @@ jobs:
           BRANCH="beacon/fix-issue-${{ github.event.inputs.issue_number || github.event.issue.number }}"
           git checkout -B "$BRANCH"
 
-      - name: Prepare Aider Prompt File
+      - name: Prepare Aider Inputs
+        id: prep
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const title = context.payload?.issue?.title || 'Autonomous Bug Fix';
             const body = context.payload?.inputs?.issue_body || context.payload?.issue?.body || '';
-            const prompt = `Fix the reported issue in this codebase.\nTitle: ${title}\nDetails:\n${body}\n\nInstructions:\n1. Locate and inspect the relevant files.\n2. Edit the files to fix the issue.\n3. Ensure all changes pass TypeScript compilation cleanly.`;
+
+            let activeFile = '';
+            const match = body.match(/<!-- BEACON_METADATA_START([\s\S]*?)BEACON_METADATA_END -->/);
+            if (match && match[1]) {
+              try {
+                const meta = JSON.parse(match[1].trim());
+                if (meta.activeFile && fs.existsSync(meta.activeFile)) {
+                  activeFile = meta.activeFile;
+                }
+              } catch (e) {
+                console.log('Error parsing metadata:', e);
+              }
+            }
+
+            const prompt = `Fix the reported issue in this codebase.\nTitle: ${title}\nDetails:\n${body}\n\nInstructions:\n1. Apply minimal targeted diff edits to fix the issue.\n2. Ensure all changes pass TypeScript compilation cleanly.`;
             fs.writeFileSync('/tmp/aider-prompt.txt', prompt, 'utf8');
+
+            core.setOutput('active_file', activeFile);
 
       - name: Run Aider with Auto Build & Type Error Resolution
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ACTIVE_FILE: ${{ steps.prep.outputs.active_file }}
         run: |
+          AIDER_EXTRA_ARGS=""
+          if [ -n "$ACTIVE_FILE" ]; then
+            AIDER_EXTRA_ARGS="--file $ACTIVE_FILE"
+          fi
           aider \
             --model openrouter/nvidia/nemotron-3.5-lightning:free \
+            --edit-format diff \
+            --map-tokens 512 \
+            --cache-prompts \
             --test-cmd "pnpm exec tsc --noEmit" \
             --auto-test \
             --yes-always \
             --no-pretty \
             --no-stream \
             --no-analytics \
-            --message-file /tmp/aider-prompt.txt
+            --message-file /tmp/aider-prompt.txt \
+            $AIDER_EXTRA_ARGS
 
       - name: Push Fix Branch
         run: |
