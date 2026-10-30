@@ -83,7 +83,7 @@ export async function createRepositoryIssueAction(
         body: JSON.stringify({
           title: issueTitle,
           body: issueBody,
-          labels: ["beacon-ai-fix", "automated"],
+          labels: ["beacon-ai-fix"],
         }),
       },
     );
