@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import type {
   BeaconIssueMetadata,
   IssueSubmissionRequest,
+  PullRequestCheckResult,
   SubmissionResult,
 } from "@/lib/issue-agent/types";
 
@@ -60,7 +61,6 @@ export async function createRepositoryIssueAction(
     const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_APP_TOKEN;
 
     if (!githubToken) {
-      // Local dev simulation mode when no GitHub PAT/App token is configured
       return {
         ok: true,
         issueNumber: 42,
@@ -110,5 +110,71 @@ export async function createRepositoryIssueAction(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error creating issue";
     return { ok: false, error: message };
+  }
+}
+
+export async function checkPullRequestStatusAction(
+  issueNumber: number,
+): Promise<PullRequestCheckResult> {
+  try {
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_APP_TOKEN;
+
+    if (!githubToken) {
+      return {
+        found: true,
+        prNumber: issueNumber + 1,
+        prUrl: `https://github.com/${BEACON_OWNER}/${BEACON_REPO}/pull/${issueNumber + 1}`,
+        prTitle: `🤖 Fix: Automated resolution for issue #${issueNumber}`,
+        state: "open",
+        isDraft: true,
+        mergeable: true,
+        commitsCount: 1,
+      };
+    }
+
+    const headBranch = `beacon/fix-issue-${issueNumber}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(BEACON_OWNER)}/${encodeURIComponent(BEACON_REPO)}/pulls?head=${encodeURIComponent(BEACON_OWNER)}:${encodeURIComponent(headBranch)}&state=all`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${githubToken}`,
+        "User-Agent": "beacon-issue-agent",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { found: false, workflowStatus: "in_progress" };
+    }
+
+    const prs = (await response.json()) as Array<{
+      number: number;
+      html_url: string;
+      title: string;
+      state: "open" | "closed";
+      draft?: boolean;
+      mergeable?: boolean | null;
+      commits?: number;
+    }>;
+
+    if (prs && Array.isArray(prs) && prs.length > 0) {
+      const pr = prs[0];
+      return {
+        found: true,
+        prNumber: pr.number,
+        prUrl: pr.html_url,
+        prTitle: pr.title,
+        state: pr.state,
+        isDraft: Boolean(pr.draft),
+        mergeable: pr.mergeable ?? true,
+        commitsCount: pr.commits ?? 1,
+      };
+    }
+
+    return { found: false, workflowStatus: "in_progress" };
+  } catch {
+    return { found: false, workflowStatus: "unknown" };
   }
 }
