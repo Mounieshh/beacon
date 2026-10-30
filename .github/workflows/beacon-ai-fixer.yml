@@ -86,16 +86,18 @@ jobs:
               }
             }
 
-            const prompt = `Fix the reported issue in this codebase.
-Title: ${title}
-Details:
-${body}
-
-Instructions:
-1. Search and identify the exact files and components in the repository related to this issue (e.g. headers, navigation, layouts, or pages).
-2. If an active file is provided as context, use it as a reference point, but inspect shared components (like components/ or app/) if the feature is defined elsewhere.
-3. Apply targeted, concrete diff edits to resolve the request. Do not ask interactive questions in CI mode.
-4. Ensure all changes pass TypeScript compilation cleanly.`;
+            const prompt = [
+              'Fix the reported issue in this codebase.',
+              `Title: ${title}`,
+              'Details:',
+              body,
+              '',
+              'Instructions:',
+              '1. Search and identify the exact files and components in the repository related to this issue (e.g. headers, navigation, layouts, or pages).',
+              '2. If an active file is provided as context, use it as a reference point, but inspect shared components (like components/ or app/) if the feature is defined elsewhere.',
+              '3. Apply targeted, concrete diff edits to resolve the request. Do not ask interactive questions in CI mode.',
+              '4. Ensure all changes pass TypeScript compilation cleanly.'
+            ].join('\n');
             fs.writeFileSync('/tmp/aider-prompt.txt', prompt, 'utf8');
 
             core.setOutput('active_file', activeFile);
