@@ -86,7 +86,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const ciCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const phaseTimersRef = useRef<NodeJS.Timeout[]>([]);
 
   // Auto scroll chat stream to bottom
   useEffect(() => {
@@ -131,8 +130,8 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           {
             id: `ci-triggered-${Date.now()}`,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-            sender: "system",
-            content: `GitHub Actions CI runner triggered (Run #${res.run.id}). Pause and cancel is now active.`,
+            sender: "agent",
+            content: `CI Pipeline is started in GitHub Actions (Run #${res.run.id}).`,
             metadata: {
               runId: res.run.id,
               runUrl: res.run.html_url,
@@ -154,57 +153,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
     };
   }, [status, activeIssue, ciTriggered]);
-
-  // Handle heuristic staged progress logs while waiting for CI
-  useEffect(() => {
-    if (status !== "running" || !activeIssue) return;
-
-    phaseTimersRef.current.forEach((t) => clearTimeout(t));
-    phaseTimersRef.current = [];
-
-    const timeline = [
-      {
-        delay: 5000,
-        phase: "grounding" as AgentStepPhase,
-        content: "Cloning repository context and initializing Aider with OpenRouter Nemotron 3.5 Lightning.",
-      },
-      {
-        delay: 14000,
-        phase: "cogitating" as AgentStepPhase,
-        content: "Analyzing AST symbol graph and isolating relevant source modules.",
-      },
-      {
-        delay: 26000,
-        phase: "editing" as AgentStepPhase,
-        content: "Synthesizing unified diff patch and applying code edits directly to working tree.",
-      },
-      {
-        delay: 40000,
-        phase: "typechecking" as AgentStepPhase,
-        content: "Running pnpm exec tsc --noEmit type check and self-healing compiler loop.",
-      },
-    ];
-
-    phaseTimersRef.current = timeline.map(({ delay, phase, content }) =>
-      setTimeout(() => {
-        setActivePhase(phase);
-        setLogs((prev) => [
-          ...prev,
-          {
-            id: `step-${Date.now()}-${phase}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-            sender: "agent",
-            phase,
-            content,
-          },
-        ]);
-      }, delay)
-    );
-
-    return () => {
-      phaseTimersRef.current.forEach((t) => clearTimeout(t));
-    };
-  }, [status, activeIssue]);
 
   // Poll GitHub for Pull Request readiness
   useEffect(() => {
@@ -291,8 +239,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
 
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
-    phaseTimersRef.current.forEach((t) => clearTimeout(t));
-    phaseTimersRef.current = [];
 
     // Cancel GitHub Actions workflow run if id is known
     if (workflowRunId) {
@@ -356,15 +302,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       content: currentPrompt,
     };
 
-    const agentMessage: AgentLogMessage = {
-      id: `agent-init-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      sender: "agent",
-      phase: "dispatching",
-      content: "Registering issue on GitHub and dispatching autonomous fixer CI runner...",
-    };
-
-    setLogs((prev) => [...prev, userMessage, agentMessage]);
+    setLogs((prev) => [...prev, userMessage]);
     setPrompt("");
 
     startTransition(async () => {
@@ -383,22 +321,17 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           titleSnippet: currentPrompt.slice(0, 30),
         });
 
-        setLogs((prev) => [
-          ...prev,
-          {
-            id: `issue-opened-${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-            sender: "system",
-            content: result.simulated
-              ? `[Local Simulation] Issue #${result.issueNumber} dispatched to simulated worker.`
-              : `GitHub Issue #${result.issueNumber} created. Waiting for CI runner to pick up workflow...`,
-            metadata: {
-              issueNumber: result.issueNumber,
-              issueUrl: result.issueUrl,
-              prBranch: result.prBranch,
+        if (result.simulated) {
+          setLogs((prev) => [
+            ...prev,
+            {
+              id: `ci-sim-${Date.now()}`,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+              sender: "agent",
+              content: `[Local Simulation] CI Pipeline is started for issue #${result.issueNumber}.`,
             },
-          },
-        ]);
+          ]);
+        }
       } else {
         setStatus("error");
         setActivePhase("error");
@@ -427,8 +360,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   const handleReset = () => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
-    phaseTimersRef.current.forEach((t) => clearTimeout(t));
-    phaseTimersRef.current = [];
 
     setStatus("idle");
     setCiTriggered(false);
