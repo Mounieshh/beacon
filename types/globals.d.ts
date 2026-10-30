@@ -6,4 +6,14 @@ declare global {
   interface CustomJwtSessionClaims {
     org_name?: string;
   }
+
+  type PageProps<T extends string = string> = {
+    params: Promise<Record<string, string | string[] | undefined>>;
+    searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  };
+
+  type LayoutProps<T extends string = string> = {
+    children: React.ReactNode;
+    params?: Promise<Record<string, string | string[] | undefined>>;
+  };
 }
