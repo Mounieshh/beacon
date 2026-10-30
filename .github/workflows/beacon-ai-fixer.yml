@@ -60,18 +60,6 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
           git push -u origin "$BRANCH"
-
-      - name: Prepare Aider Prompt
-        id: prompt
-        uses: actions/github-script@v7
-        with:
-          result-encoding: string
-          script: |
-            const title = (context.payload?.issue?.title || 'Autonomous Bug Fix').replace(/["`$\\]/g, ' ');
-            const rawBody = context.payload?.inputs?.issue_body || context.payload?.issue?.body || '';
-            const cleanBody = rawBody.replace(/["`$\\]/g, ' ').replace(/\r?\n/g, ' ');
-            return `--yes --message "Fix the reported issue in this codebase. Title: ${title}. Details: ${cleanBody}. Ensure changes compile cleanly."`;
-
       - name: Run Aider via Marketplace Action
         uses: mirrajabi/aider-github-action@v1.1.0
         timeout-minutes: 10
@@ -81,7 +69,9 @@ jobs:
           api_key_env_value: ${{ secrets.OPENROUTER_API_KEY }}
           openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
           branch: "beacon/fix-issue-${{ github.event.inputs.issue_number || github.event.issue.number }}"
-          aider_args: ${{ steps.prompt.outputs.result }}
+          aider_args: >-
+            --yes
+            --message "Fix the reported issue in this codebase. Title: ${{ github.event.issue.title }}. Details: ${{ github.event.inputs.issue_body || github.event.issue.body }}. Edit source files and ensure clean compilation."
 
       - name: Pull Aider Fix to Runner
         run: |
