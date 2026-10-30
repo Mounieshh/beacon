@@ -565,9 +565,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
                   }}
                 />
               </Box>
-              <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", mt: 0.25 }}>
-                Aider + OpenRouter Nemotron 3.5 Lightning
-              </Typography>
             </Box>
           </Box>
 
