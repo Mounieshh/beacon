@@ -28,6 +28,14 @@ export type SubmissionResult =
       error: string;
     };
 
+export type WorkflowRunInfo = {
+  id: number;
+  html_url: string;
+  status: "queued" | "in_progress" | "completed";
+  conclusion?: string | null;
+  display_title?: string;
+};
+
 export type PullRequestCheckResult =
   | {
       found: true;
@@ -66,6 +74,8 @@ export type AgentLogMessage = {
     prUrl?: string;
     prBranch?: string;
     commitsCount?: number;
+    runId?: number;
+    runUrl?: string;
   };
 };
 

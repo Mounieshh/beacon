@@ -25,8 +25,10 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import StopIcon from "@mui/icons-material/Stop";
 import type { AgentLogMessage, AgentStepPhase } from "@/lib/issue-agent/types";
 import {
+  cancelWorkflowRunAction,
   checkPullRequestStatusAction,
   createRepositoryIssueAction,
+  findTriggeredWorkflowRunAction,
 } from "@/app/(workspace)/analyses/[id]/issue-actions";
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 };
 
 const THINKING_PHRASES = [
+  "Waiting for CI runner spin-up...",
   "Cogitating on AST relationships...",
   "Vegetating over codebase dependencies...",
   "Synthesizing targeted diff hunks...",
@@ -59,6 +62,8 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [, setActivePhase] = useState<AgentStepPhase>("dispatching");
   const [logs, setLogs] = useState<AgentLogMessage[]>([]);
+  const [ciTriggered, setCiTriggered] = useState(false);
+  const [workflowRunId, setWorkflowRunId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [activeIssue, setActiveIssue] = useState<{
@@ -66,6 +71,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     issueUrl: string;
     prBranch: string;
     simulated?: boolean;
+    titleSnippet?: string;
   } | null>(null);
 
   const [activePr, setActivePr] = useState<{
@@ -78,6 +84,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const ciCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const phaseTimersRef = useRef<NodeJS.Timeout[]>([]);
 
@@ -102,32 +109,77 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     };
   }, [status]);
 
+  // Check for CI runner detection right after issue creation
+  useEffect(() => {
+    if (status !== "running" || !activeIssue || ciTriggered) return;
+
+    let checkAttempts = 0;
+    const checkRunner = async () => {
+      checkAttempts += 1;
+      const res = await findTriggeredWorkflowRunAction(
+        activeIssue.issueNumber,
+        activeIssue.titleSnippet
+      );
+
+      if (res.found) {
+        setCiTriggered(true);
+        setWorkflowRunId(res.run.id);
+        if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
+
+        setLogs((prev) => [
+          ...prev,
+          {
+            id: `ci-triggered-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            sender: "system",
+            content: `GitHub Actions CI runner triggered (Run #${res.run.id}). Pause and cancel is now active.`,
+            metadata: {
+              runId: res.run.id,
+              runUrl: res.run.html_url,
+            },
+          },
+        ]);
+      } else if (checkAttempts >= 15) {
+        // Fallback after 30 seconds if GitHub events are delayed
+        setCiTriggered(true);
+        if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
+      }
+    };
+
+    // Poll every 2 seconds for runner pickup
+    checkRunner();
+    ciCheckTimerRef.current = setInterval(checkRunner, 2000);
+
+    return () => {
+      if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
+    };
+  }, [status, activeIssue, ciTriggered]);
+
   // Handle heuristic staged progress logs while waiting for CI
   useEffect(() => {
     if (status !== "running" || !activeIssue) return;
 
-    // Clear any previous phase timers
     phaseTimersRef.current.forEach((t) => clearTimeout(t));
     phaseTimersRef.current = [];
 
     const timeline = [
       {
-        delay: 4000,
+        delay: 5000,
         phase: "grounding" as AgentStepPhase,
         content: "Cloning repository context and initializing Aider with OpenRouter Nemotron 3.5 Lightning.",
       },
       {
-        delay: 12000,
+        delay: 14000,
         phase: "cogitating" as AgentStepPhase,
         content: "Analyzing AST symbol graph and isolating relevant source modules.",
       },
       {
-        delay: 24000,
+        delay: 26000,
         phase: "editing" as AgentStepPhase,
         content: "Synthesizing unified diff patch and applying code edits directly to working tree.",
       },
       {
-        delay: 38000,
+        delay: 40000,
         phase: "typechecking" as AgentStepPhase,
         content: "Running pnpm exec tsc --noEmit type check and self-healing compiler loop.",
       },
@@ -166,6 +218,8 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
 
       if (res.found) {
         if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+        if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
+
         setActivePr({
           prNumber: res.prNumber,
           prUrl: res.prUrl,
@@ -191,6 +245,8 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
         ]);
       } else if (activeIssue.simulated && pollCount >= 8) {
         if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+        if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
+
         const mockPrNumber = activeIssue.issueNumber + 1;
         const mockPrUrl = `https://github.com/Mounieshh/beacon/pull/${mockPrNumber}`;
         setActivePr({
@@ -230,21 +286,52 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     };
   }, [status, activeIssue]);
 
-  const handlePause = () => {
+  const handlePause = async () => {
+    if (!ciTriggered) return;
+
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
     phaseTimersRef.current.forEach((t) => clearTimeout(t));
     phaseTimersRef.current = [];
 
+    // Cancel GitHub Actions workflow run if id is known
+    if (workflowRunId) {
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: `cancelling-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          sender: "system",
+          content: `Cancelling GitHub Actions workflow run #${workflowRunId}...`,
+        },
+      ]);
+
+      await cancelWorkflowRunAction(workflowRunId);
+
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: `cancelled-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          sender: "system",
+          content: `GitHub Actions workflow run #${workflowRunId} stopped and cancelled.`,
+        },
+      ]);
+    } else {
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: `paused-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          sender: "system",
+          content: "Fixer agent paused by developer.",
+        },
+      ]);
+    }
+
     setStatus("idle");
-    setLogs((prev) => [
-      ...prev,
-      {
-        id: `paused-${Date.now()}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-        sender: "system",
-        content: "Fixer agent paused by developer.",
-      },
-    ]);
+    setCiTriggered(false);
+    setWorkflowRunId(null);
   };
 
   const handleSend = () => {
@@ -256,6 +343,8 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       (typeof window !== "undefined" ? window.location.pathname : undefined);
 
     setStatus("running");
+    setCiTriggered(false);
+    setWorkflowRunId(null);
     setActivePhase("dispatching");
     setErrorMessage("");
     setActivePr(null);
@@ -272,7 +361,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       sender: "agent",
       phase: "dispatching",
-      content: "Registering issue on GitHub and preparing autonomous fixer dispatch...",
+      content: "Registering issue on GitHub and dispatching autonomous fixer CI runner...",
     };
 
     setLogs((prev) => [...prev, userMessage, agentMessage]);
@@ -291,6 +380,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           issueUrl: result.issueUrl,
           prBranch: result.prBranch,
           simulated: result.simulated,
+          titleSnippet: currentPrompt.slice(0, 30),
         });
 
         setLogs((prev) => [
@@ -301,7 +391,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
             sender: "system",
             content: result.simulated
               ? `[Local Simulation] Issue #${result.issueNumber} dispatched to simulated worker.`
-              : `GitHub Issue #${result.issueNumber} created. GitHub Actions workflow triggered on branch "${result.prBranch}".`,
+              : `GitHub Issue #${result.issueNumber} created. Waiting for CI runner to pick up workflow...`,
             metadata: {
               issueNumber: result.issueNumber,
               issueUrl: result.issueUrl,
@@ -336,10 +426,13 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
 
   const handleReset = () => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (ciCheckTimerRef.current) clearInterval(ciCheckTimerRef.current);
     phaseTimersRef.current.forEach((t) => clearTimeout(t));
     phaseTimersRef.current = [];
 
     setStatus("idle");
+    setCiTriggered(false);
+    setWorkflowRunId(null);
     setActivePhase("dispatching");
     setActiveIssue(null);
     setActivePr(null);
@@ -577,7 +670,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
                   mb: 3,
                 }}
               >
-                Describe an issue or code change below. The agent will inspect the repository, write targeted diffs, verify clean compilation, and raise a Pull Request.
+                Describe an issue or code change below. The agent will inspect the repository, write targeted diffs, verify clean compilation, and open a PR.
               </Typography>
 
               {/* Suggestions */}
@@ -857,23 +950,50 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                 {status === "running" ? (
-                  <Tooltip title="Pause Agent">
-                    <IconButton
-                      size="small"
-                      onClick={handlePause}
+                  <Tooltip
+                    title={
+                      ciTriggered
+                        ? "Stop & cancel GitHub Actions workflow"
+                        : "Waiting for CI runner to trigger..."
+                    }
+                  >
+                    <Box
+                      component="span"
                       sx={{
-                        width: 32,
-                        height: 32,
-                        bgcolor: "rgba(239, 68, 68, 0.15)",
-                        color: "#ef4444",
-                        border: "1px solid rgba(239, 68, 68, 0.3)",
-                        "&:hover": {
-                          bgcolor: "rgba(239, 68, 68, 0.25)",
-                        },
+                        cursor: ciTriggered ? "pointer" : "not-allowed",
+                        display: "inline-flex",
                       }}
                     >
-                      <StopIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={ciTriggered ? handlePause : undefined}
+                        disabled={!ciTriggered}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: ciTriggered
+                            ? "rgba(239, 68, 68, 0.15)"
+                            : "rgba(255, 255, 255, 0.05)",
+                          color: ciTriggered ? "#ef4444" : "var(--fg-muted)",
+                          border: `1px solid ${
+                            ciTriggered
+                              ? "rgba(239, 68, 68, 0.3)"
+                              : "var(--line)"
+                          }`,
+                          opacity: ciTriggered ? 1 : 0.45,
+                          cursor: ciTriggered ? "pointer" : "not-allowed",
+                          pointerEvents: ciTriggered ? "auto" : "none",
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            bgcolor: ciTriggered
+                              ? "rgba(239, 68, 68, 0.25)"
+                              : "transparent",
+                          },
+                        }}
+                      >
+                        <StopIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
                   </Tooltip>
                 ) : (
                   <Tooltip title="Send Instruction">

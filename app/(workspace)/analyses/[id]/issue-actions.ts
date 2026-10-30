@@ -6,6 +6,7 @@ import type {
   IssueSubmissionRequest,
   PullRequestCheckResult,
   SubmissionResult,
+  WorkflowRunInfo,
 } from "@/lib/issue-agent/types";
 
 const BEACON_OWNER = process.env.BEACON_REPO_OWNER || "Mounieshh";
@@ -110,6 +111,111 @@ export async function createRepositoryIssueAction(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error creating issue";
     return { ok: false, error: message };
+  }
+}
+
+export async function findTriggeredWorkflowRunAction(
+  issueNumber: number,
+  titleSnippet?: string,
+): Promise<{ found: true; run: WorkflowRunInfo } | { found: false }> {
+  try {
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_APP_TOKEN;
+
+    if (!githubToken) {
+      return {
+        found: true,
+        run: {
+          id: 999000 + issueNumber,
+          html_url: `https://github.com/${BEACON_OWNER}/${BEACON_REPO}/actions/runs/999000`,
+          status: "in_progress",
+          display_title: `Simulated Fix for Issue #${issueNumber}`,
+        },
+      };
+    }
+
+    const url = `https://api.github.com/repos/${encodeURIComponent(BEACON_OWNER)}/${encodeURIComponent(BEACON_REPO)}/actions/runs?event=issues&per_page=10`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${githubToken}`,
+        "User-Agent": "beacon-issue-agent",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { found: false };
+    }
+
+    const data = (await response.json()) as {
+      workflow_runs?: Array<{
+        id: number;
+        html_url: string;
+        status: "queued" | "in_progress" | "completed";
+        conclusion: string | null;
+        display_title: string;
+        created_at: string;
+      }>;
+    };
+
+    const runs = data.workflow_runs || [];
+    const matched = runs.find((r) => {
+      if (r.status !== "queued" && r.status !== "in_progress") return false;
+      if (titleSnippet && r.display_title.toLowerCase().includes(titleSnippet.toLowerCase().slice(0, 20))) {
+        return true;
+      }
+      return true;
+    });
+
+    if (matched) {
+      return {
+        found: true,
+        run: {
+          id: matched.id,
+          html_url: matched.html_url,
+          status: matched.status,
+          conclusion: matched.conclusion,
+          display_title: matched.display_title,
+        },
+      };
+    }
+
+    return { found: false };
+  } catch {
+    return { found: false };
+  }
+}
+
+export async function cancelWorkflowRunAction(
+  runId: number,
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_APP_TOKEN;
+
+    if (!githubToken) {
+      return { ok: true, message: "Simulated workflow run cancelled" };
+    }
+
+    const url = `https://api.github.com/repos/${encodeURIComponent(BEACON_OWNER)}/${encodeURIComponent(BEACON_REPO)}/actions/runs/${runId}/cancel`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${githubToken}`,
+        "User-Agent": "beacon-issue-agent",
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { ok: false, message: `Failed to cancel run (${response.status}): ${text}` };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error cancelling workflow run";
+    return { ok: false, message: msg };
   }
 }
 
