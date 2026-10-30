@@ -87,8 +87,9 @@ export default async function LandingPage() {
 
         {/* Short Centered Description */}
         <p className="mt-5 max-w-2xl text-[14px] leading-relaxed text-[var(--fg-muted)] sm:text-[15px]">
-          Beacon turns any TypeScript or JavaScript repository into an interactive, deterministic AST dependency graph.
-          Explore complex module relationships, calculate change impact before merging, and detect reachable vulnerabilities with zero AI hallucinations.
+          Beacon turns any TypeScript or JavaScript repository into an interactive, deterministic AST dependency graph, delivering real-time autonomous code intelligence.
+          <br />
+          <span className="text-[var(--accent)]">Inspect blast radii and security.</span>
         </p>
 
         {/* Call to action button */}
@@ -133,7 +134,7 @@ export default async function LandingPage() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="mt-16 grid w-full max-w-4xl grid-cols-1 gap-4 text-left sm:grid-cols-3">
+        <div className="mt-16 grid w-full max-w-4ls grid-cols-1 gap-4 text-left sm:grid-cols-3">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 transition-shadow hover:shadow-sm">
             <div className="mb-3 flex size-8 items-center justify-center rounded bg-[var(--raised)] text-[var(--accent)]">
               <HubIcon sx={{ fontSize: 18 }} />
