@@ -2,7 +2,7 @@ name: Beacon AI Autonomous Fixer
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, labeled]
   workflow_dispatch:
     inputs:
       issue_body:
@@ -20,10 +20,10 @@ concurrency:
 
 jobs:
   resolve-issue:
-    # Restrict execution to when beacon-ai-fix label is applied or via manual dispatch
+    # Restrict execution to when beacon-ai-fix label is present or via manual dispatch
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.label.name == 'beacon-ai-fix' &&
+      (contains(github.event.issue.labels.*.name, 'beacon-ai-fix') &&
        (github.event.issue.author_association == 'OWNER' ||
         github.event.issue.author_association == 'COLLABORATOR' ||
         github.event.issue.author_association == 'MEMBER'))
