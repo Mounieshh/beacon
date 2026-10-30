@@ -78,7 +78,7 @@ function autoDetectTargetFile(prompt: string): string | undefined {
   return undefined;
 }
 
-async function callGeminiNative(
+async function callGemini(
   apiKey: string,
   systemPrompt: string,
   userMessage: string,
@@ -125,63 +125,17 @@ async function callGeminiNative(
   return rawText;
 }
 
-async function callOpenAICompatible(
-  baseURL: string,
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> {
-  const endpoint = `${baseURL.replace(/\/+$/, "")}/chat/completions`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.2,
-    }),
-    signal: AbortSignal.timeout(180_000),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`API error (${response.status}): ${text}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{
-      message?: { content?: string };
-    }>;
-  };
-
-  const rawText = data.choices?.[0]?.message?.content;
-  if (!rawText) {
-    throw new Error("Model returned empty response.");
-  }
-  return rawText;
-}
-
 async function main() {
   const issueBody = process.env.ISSUE_BODY || "";
   const geminiKey = process.env.GEMINI_API_KEY;
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
-  const openAIKey = process.env.OPENAI_API_KEY;
 
   if (!issueBody.trim()) {
     console.error("Error: ISSUE_BODY environment variable is empty.");
     process.exit(1);
   }
 
-  if (!geminiKey && !openRouterKey && !openAIKey) {
-    console.error("Error: No GEMINI_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY provided.");
+  if (!geminiKey) {
+    console.error("Error: GEMINI_API_KEY environment variable is not set.");
     process.exit(1);
   }
 
@@ -217,30 +171,8 @@ Respond with ONLY a JSON object in this format:
     .filter(Boolean)
     .join("\n\n");
 
-  let rawJson = "";
-
-  if (geminiKey) {
-    console.log("[Beacon AI Fixer] Calling Gemini API (gemini-3.8-flash)...");
-    rawJson = await callGeminiNative(geminiKey, systemPrompt, userMessage);
-  } else if (openRouterKey) {
-    console.log("[Beacon AI Fixer] Calling OpenRouter API...");
-    rawJson = await callOpenAICompatible(
-      "https://openrouter.ai/api/v1",
-      openRouterKey,
-      "google/gemini-3.8-flash",
-      systemPrompt,
-      userMessage,
-    );
-  } else if (openAIKey) {
-    console.log("[Beacon AI Fixer] Calling OpenAI API...");
-    rawJson = await callOpenAICompatible(
-      "https://api.openai.com/v1",
-      openAIKey,
-      "gpt-4o-mini",
-      systemPrompt,
-      userMessage,
-    );
-  }
+  console.log("[Beacon AI Fixer] Calling Gemini API (gemini-3.8-flash)...");
+  const rawJson = await callGemini(geminiKey, systemPrompt, userMessage);
 
   const result = JSON.parse(rawJson) as {
     file: string;
