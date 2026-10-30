@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { AgentWidget } from "@/components/agent-dock";
 
 // Everything inside the app renders within this shell, always under an
 // active organization. No organization yet means first sign-in: /start
@@ -18,6 +19,7 @@ export default async function WorkspaceLayout({ children }: LayoutProps<"/">) {
     <Box className="flex min-h-0 flex-1 flex-col">
       <WorkspaceHeader theme={theme} />
       <Box component="main" className="min-h-0 flex-1 overflow-auto">{children}</Box>
+      <AgentWidget />
     </Box>
   );
 }

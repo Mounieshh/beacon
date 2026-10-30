@@ -36,6 +36,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analyses/[id]
           analysisId={header.analysisId}
           commitSha={header.commitSha}
           repository={{
+            owner: header.repository.owner,
             name: header.repository.name,
             projects: result.projects,
             skipped: result.coverage.files.skipped,
