@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { GoogleGenAI, Type } from "@google/genai";
 
 type Metadata = {
   version: number;
@@ -78,63 +79,16 @@ function autoDetectTargetFile(prompt: string): string | undefined {
   return undefined;
 }
 
-async function callGemini(
-  apiKey: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: userMessage }],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-      },
-    }),
-    signal: AbortSignal.timeout(180_000),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${text}`);
-  }
-
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>;
-      };
-    }>;
-  };
-
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error("Gemini returned empty candidate response.");
-  }
-  return rawText;
-}
-
 async function main() {
   const issueBody = process.env.ISSUE_BODY || "";
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!issueBody.trim()) {
     console.error("Error: ISSUE_BODY environment variable is empty.");
     process.exit(1);
   }
 
-  if (!geminiKey) {
+  if (!apiKey) {
     console.error("Error: GEMINI_API_KEY environment variable is not set.");
     process.exit(1);
   }
@@ -153,15 +107,12 @@ async function main() {
 
   console.log(`[Beacon AI Fixer] Processing issue... Target file: ${targetFile ?? "unspecified"}`);
 
+  const ai = new GoogleGenAI({ apiKey });
+
   const systemPrompt = `You are Beacon's autonomous code repair agent.
 You are given an issue reported by a developer and repository context.
 Your goal is to provide a complete, robust fix.
-Respond with ONLY a JSON object in this format:
-{
-  "file": "<relative file path to edit or create>",
-  "content": "<complete new file content>",
-  "summary": "<1-sentence summary of the fix>"
-}`;
+Respond with a JSON object containing the relative file path to edit or create, the complete new file content, and a 1-sentence summary of the fix.`;
 
   const userMessage = [
     `Issue Report:\n${prompt}`,
@@ -171,8 +122,41 @@ Respond with ONLY a JSON object in this format:
     .filter(Boolean)
     .join("\n\n");
 
-  console.log("[Beacon AI Fixer] Calling Gemini API (gemini-3.8-flash)...");
-  const rawJson = await callGemini(geminiKey, systemPrompt, userMessage);
+  console.log("[Beacon AI Fixer] Calling Google Gen AI SDK (gemini-3.8-flash)...");
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.8-flash",
+    contents: userMessage,
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          file: {
+            type: Type.STRING,
+            description: "Relative file path to edit or create",
+          },
+          content: {
+            type: Type.STRING,
+            description: "Complete new file content",
+          },
+          summary: {
+            type: Type.STRING,
+            description: "1-sentence summary of the fix",
+          },
+        },
+        required: ["file", "content", "summary"],
+      },
+      abortSignal: AbortSignal.timeout(180_000),
+    },
+  });
+
+  const rawJson = response.text;
+  if (!rawJson) {
+    console.error("Error: Model returned empty response.");
+    process.exit(1);
+  }
 
   const result = JSON.parse(rawJson) as {
     file: string;
