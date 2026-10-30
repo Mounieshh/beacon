@@ -1,22 +1,17 @@
 export type IssueSubmissionRequest = {
-  analysisId: string;
-  repository: {
-    owner: string;
-    name: string;
-  };
-  commitSha: string;
   prompt: string;
   activeFile?: string;
-  findingTitle?: string;
+  analysisId?: string;
+  contextPage?: string;
+  errorStack?: string;
 };
 
 export type BeaconIssueMetadata = {
   version: 1;
-  beaconAnalysisId: string;
-  repository: string;
-  commitSha: string;
+  hostRepository: string;
   activeFile?: string;
-  findingTitle?: string;
+  analysisId?: string;
+  contextPage?: string;
   createdFrom: "beacon-agent-dock";
 };
 

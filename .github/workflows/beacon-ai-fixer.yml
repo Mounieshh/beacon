@@ -3,15 +3,26 @@ name: Beacon AI Autonomous Fixer
 on:
   issues:
     types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_body:
+        description: "Test Issue Body content"
+        required: false
+        default: "Fix formatting in types/globals.d.ts\n\n<!-- BEACON_METADATA_START\n{\n  \"version\": 1,\n  \"activeFile\": \"types/globals.d.ts\"\n}\nBEACON_METADATA_END -->"
+      issue_number:
+        description: "Issue number for test"
+        required: false
+        default: "1"
 
 jobs:
   resolve-issue:
-    # Restrict automated execution to issues with 'beacon-ai-fix' opened/approved by repo collaborators
+    # Restrict automated execution to issues with 'beacon-ai-fix' opened/approved by repo collaborators, or manual dispatch
     if: >-
-      contains(github.event.issue.labels.*.name, 'beacon-ai-fix') &&
-      (github.event.issue.author_association == 'OWNER' ||
-       github.event.issue.author_association == 'COLLABORATOR' ||
-       github.event.issue.author_association == 'MEMBER')
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.issue.labels.*.name, 'beacon-ai-fix') &&
+       (github.event.issue.author_association == 'OWNER' ||
+        github.event.issue.author_association == 'COLLABORATOR' ||
+        github.event.issue.author_association == 'MEMBER'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,7 +55,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY: ${{ github.event.inputs.issue_body || github.event.issue.body }}
         run: |
           npx tsx scripts/resolve-issue-gemini.ts
 
@@ -57,11 +68,11 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "fix: resolve issue #${{ github.event.issue.number }} via Beacon Agent"
-          branch: "beacon/fix-issue-${{ github.event.issue.number }}"
-          title: "🤖 Fix: ${{ github.event.issue.title }}"
+          commit-message: "fix: resolve issue #${{ github.event.inputs.issue_number || github.event.issue.number }} via Beacon Agent"
+          branch: "beacon/fix-issue-${{ github.event.inputs.issue_number || github.event.issue.number }}"
+          title: "🤖 Fix: ${{ github.event.issue.title || 'Manual Dispatch Fix' }}"
           body: |
-            Resolves #${{ github.event.issue.number }}
+            Resolves #${{ github.event.inputs.issue_number || github.event.issue.number }}
 
             ### Automated Changes
             Fix generated and verified by **Beacon AI Agent** (Gemini).
@@ -71,7 +82,7 @@ jobs:
           draft: true
 
       - name: Post Feedback Comment on Issue
-        if: steps.cpr.outputs.pull-request-number
+        if: steps.cpr.outputs.pull-request-number && context.issue.number
         uses: actions/github-script@v7
         with:
           script: |

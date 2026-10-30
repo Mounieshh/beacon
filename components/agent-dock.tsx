@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Drawer,
   IconButton,
   TextField,
   Typography,
@@ -14,25 +15,17 @@ import type { SubmissionStatus } from "@/lib/issue-agent/types";
 import { createRepositoryIssueAction } from "@/app/(workspace)/analyses/[id]/issue-actions";
 
 type Props = {
-  analysisId: string;
-  repository: { owner?: string; name: string };
-  commitSha: string;
-  selectedFile?: string | null;
+  analysisId?: string;
+  contextPage?: string;
 };
 
-export function AgentDock({
-  analysisId,
-  repository,
-  commitSha,
-  selectedFile,
-}: Props) {
+export function AgentWidget({ analysisId, contextPage }: Props) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [targetFile, setTargetFile] = useState("");
+  const [errorDetails, setErrorDetails] = useState("");
   const [status, setStatus] = useState<SubmissionStatus>({ state: "idle" });
   const [isPending, startTransition] = useTransition();
-
-  const repoOwner = repository.owner || "unknown";
-  const repoName = repository.name;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -41,12 +34,16 @@ export function AgentDock({
     setStatus({ state: "submitting" });
 
     startTransition(async () => {
+      const page =
+        contextPage ||
+        (typeof window !== "undefined" ? window.location.pathname : undefined);
+
       const result = await createRepositoryIssueAction({
-        analysisId,
-        repository: { owner: repoOwner, name: repoName },
-        commitSha,
         prompt: prompt.trim(),
-        activeFile: selectedFile || undefined,
+        activeFile: targetFile.trim() || undefined,
+        analysisId,
+        contextPage: page,
+        errorStack: errorDetails.trim() || undefined,
       });
 
       if (result.ok) {
@@ -58,215 +55,223 @@ export function AgentDock({
           simulated: result.simulated,
         });
         setPrompt("");
+        setErrorDetails("");
       } else {
         setStatus({ state: "error", message: result.error });
       }
     });
   };
 
+  const handleClose = () => {
+    setOpen(false);
+    if (status.state === "created" || status.state === "error") {
+      setStatus({ state: "idle" });
+    }
+  };
+
   return (
-    <Box
-      component="section"
-      aria-label="Beacon AI Agent Dock"
-      sx={{
-        borderTop: "1px solid var(--line)",
-        bgcolor: "var(--surface)",
-        px: 2,
-        py: open ? 1.5 : 1,
-        transition: "all 0.15s ease",
-        zIndex: 10,
-      }}
-    >
-      {!open ? (
-        <Box
+    <>
+      {/* Floating Widget Button at Bottom Right */}
+      <Box
+        sx={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          zIndex: 1200,
+        }}
+      >
+        <Button
+          onClick={() => setOpen(true)}
+          variant="contained"
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
+            gap: 1,
+            px: 2,
+            py: 1,
+            borderRadius: "9999px",
+            bgcolor: "var(--accent, #2563eb)",
+            color: "#ffffff",
+            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.25)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            textTransform: "none",
+            fontSize: "13px",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            "&:hover": {
+              bgcolor: "var(--accent-hover, #1d4ed8)",
+              transform: "translateY(-1px)",
+              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.35)",
+            },
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flex: 1,
-              cursor: "pointer",
-            }}
-            onClick={() => setOpen(true)}
-          >
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                bgcolor: "var(--accent-subtle, rgba(59, 130, 246, 0.15))",
-                color: "var(--accent, #3b82f6)",
-                fontSize: "12px",
-                fontWeight: 600,
-              }}
-            >
-              🤖
-            </Box>
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "12px",
-                color: "var(--fg-muted)",
-                userSelect: "none",
-              }}
-            >
-              Have Beacon AI file a GitHub issue and trigger a CI pull request...
-            </Typography>
-            {selectedFile && (
-              <Box
-                component="span"
-                sx={{
-                  fontSize: "11px",
-                  px: 1,
-                  py: 0.2,
-                  borderRadius: 1,
-                  bgcolor: "var(--line)",
-                  color: "var(--fg)",
-                  fontFamily: "monospace",
-                }}
-              >
-                Target: {selectedFile}
-              </Box>
-            )}
+          <Box component="span" sx={{ fontSize: "16px", lineHeight: 1 }}>
+            🤖
           </Box>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => setOpen(true)}
-            sx={{
-              fontSize: "11px",
-              textTransform: "none",
-              borderColor: "var(--line)",
+          <Box component="span">Report Dev Issue</Box>
+        </Button>
+      </Box>
+
+      {/* Right-Side Drawer */}
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={handleClose}
+        slotProps={{
+          paper: {
+            sx: {
+              width: { xs: "100%", sm: 440 },
+              bgcolor: "var(--surface)",
               color: "var(--fg)",
-              py: 0.25,
-              px: 1.25,
-            }}
-          >
-            Open Dock
-          </Button>
-        </Box>
-      ) : (
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)" }}>
-                Beacon Agent Dock
-              </Typography>
-              <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)" }}>
-                Creates GitHub Issue &rarr; Dispatches CI Agent &rarr; Opens Pull Request
+              borderLeft: "1px solid var(--line)",
+              boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.2)",
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+            },
+          },
+        }}
+      >
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: "flex", flexDirection: "column", height: "100%", gap: 2 }}
+        >
+          {/* Header */}
+          <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography sx={{ fontSize: "16px", fontWeight: 600, color: "var(--fg)" }}>
+                  Beacon Dev Fixer
+                </Typography>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: "11px",
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: 1,
+                    bgcolor: "var(--line)",
+                    color: "var(--fg-muted)",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  Mounieshh/beacon
+                </Box>
+              </Box>
+              <Typography sx={{ fontSize: "12px", color: "var(--fg-muted)", mt: 0.5 }}>
+                Report an issue in Beacon. A GitHub Issue will be opened and CI will prepare an automated fix PR.
               </Typography>
             </Box>
             <IconButton
               size="small"
-              onClick={() => {
-                setOpen(false);
-                if (status.state === "created" || status.state === "error") {
-                  setStatus({ state: "idle" });
-                }
-              }}
-              sx={{ color: "var(--fg-muted)", p: 0.5 }}
+              onClick={handleClose}
+              sx={{ color: "var(--fg-muted)", mt: -0.5, mr: -0.5 }}
             >
-              <CloseIcon sx={{ fontSize: 16 }} />
+              <CloseIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>
 
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", fontSize: "11px" }}>
-            <Box
+          <Box sx={{ height: "1px", bgcolor: "var(--line)", width: "100%" }} />
+
+          {/* Target File Input */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+            <Typography sx={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)" }}>
+              Target File in Beacon (Optional)
+            </Typography>
+            <TextField
+              size="small"
+              placeholder="e.g. components/analysis-view.tsx or components/shell.tsx"
+              value={targetFile}
+              onChange={(e) => setTargetFile(e.target.value)}
               sx={{
-                px: 1,
-                py: 0.25,
-                borderRadius: 1,
-                bgcolor: "var(--line)",
-                color: "var(--fg)",
-                fontFamily: "monospace",
-              }}
-            >
-              repo: {repoOwner}/{repoName}
-            </Box>
-            <Box
-              sx={{
-                px: 1,
-                py: 0.25,
-                borderRadius: 1,
-                bgcolor: "var(--line)",
-                color: "var(--fg)",
-                fontFamily: "monospace",
-              }}
-            >
-              sha: {commitSha.slice(0, 7)}
-            </Box>
-            {selectedFile && (
-              <Box
-                sx={{
-                  px: 1,
-                  py: 0.25,
+                "& .MuiInputBase-root": {
+                  fontSize: "12px",
+                  bgcolor: "var(--canvas)",
+                  color: "var(--fg)",
+                  border: "1px solid var(--line)",
                   borderRadius: 1,
-                  bgcolor: "rgba(59, 130, 246, 0.15)",
-                  color: "#3b82f6",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
                   fontFamily: "monospace",
-                }}
-              >
-                focus: {selectedFile}
-              </Box>
-            )}
+                },
+              }}
+            />
           </Box>
 
-          <TextField
-            autoFocus
-            fullWidth
-            multiline
-            rows={2}
-            size="small"
-            placeholder={
-              selectedFile
-                ? `Describe what needs to be fixed or improved in ${selectedFile}...`
-                : "Describe the bug, architectural issue, or test to generate..."
-            }
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            disabled={status.state === "submitting"}
-            sx={{
-              "& .MuiInputBase-root": {
-                fontSize: "12px",
-                bgcolor: "var(--canvas)",
-                color: "var(--fg)",
-                border: "1px solid var(--line)",
-                borderRadius: 1,
-              },
-            }}
-          />
+          {/* Description Field */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+            <Typography sx={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)" }}>
+              Error Description / What to Fix *
+            </Typography>
+            <TextField
+              required
+              fullWidth
+              multiline
+              rows={4}
+              size="small"
+              placeholder="Describe the bug or unexpected behavior in Beacon (e.g. 'Dependency map pan stops responding after opening detail drawer')..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              disabled={status.state === "submitting"}
+              sx={{
+                "& .MuiInputBase-root": {
+                  fontSize: "12px",
+                  bgcolor: "var(--canvas)",
+                  color: "var(--fg)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 1,
+                },
+              }}
+            />
+          </Box>
 
+          {/* Error Details / Logs */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+            <Typography sx={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)" }}>
+              Console Stack / Error Details (Optional)
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              size="small"
+              placeholder="Paste any error trace or console output..."
+              value={errorDetails}
+              onChange={(e) => setErrorDetails(e.target.value)}
+              disabled={status.state === "submitting"}
+              sx={{
+                "& .MuiInputBase-root": {
+                  fontSize: "11px",
+                  bgcolor: "var(--canvas)",
+                  color: "var(--fg)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 1,
+                  fontFamily: "monospace",
+                },
+              }}
+            />
+          </Box>
+
+          {/* Status Feedback */}
           {status.state === "created" && (
             <Box
               sx={{
-                p: 1.2,
+                p: 1.5,
                 borderRadius: 1,
                 bgcolor: "rgba(34, 197, 94, 0.1)",
                 border: "1px solid rgba(34, 197, 94, 0.3)",
                 fontSize: "12px",
-                color: "var(--fg)",
               }}
             >
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#16a34a" }}>
-                Issue #{status.issueNumber} created successfully!
+              <Typography sx={{ fontSize: "13px", fontWeight: 600, color: "#16a34a" }}>
+                Issue #{status.issueNumber} opened on GitHub!
               </Typography>
-              <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", mt: 0.5 }}>
+              <Typography sx={{ fontSize: "12px", color: "var(--fg)", mt: 0.5 }}>
                 {status.simulated ? (
-                  <span>[Dev Simulation] Configured GitHub workflow would pick up <code>{status.prBranch}</code>.</span>
+                  <span>[Dev Simulation] GitHub Actions would pick up <code>{status.prBranch}</code> in Beacon.</span>
                 ) : (
                   <span>
-                    View at{" "}
+                    Track issue:{" "}
                     <a
                       href={status.issueUrl}
                       target="_blank"
@@ -275,7 +280,7 @@ export function AgentDock({
                     >
                       {status.issueUrl}
                     </a>
-                    . CI agent runner triggered to create PR.
+                    . CI resolver started in <strong>beacon</strong>.
                   </span>
                 )}
               </Typography>
@@ -285,11 +290,11 @@ export function AgentDock({
           {status.state === "error" && (
             <Box
               sx={{
-                p: 1,
+                p: 1.5,
                 borderRadius: 1,
                 bgcolor: "rgba(239, 68, 68, 0.1)",
                 border: "1px solid rgba(239, 68, 68, 0.3)",
-                fontSize: "11px",
+                fontSize: "12px",
                 color: "#dc2626",
               }}
             >
@@ -297,38 +302,43 @@ export function AgentDock({
             </Box>
           )}
 
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
+          <Box sx={{ flex: 1 }} />
+
+          {/* Footer Actions */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5, pt: 2, borderTop: "1px solid var(--line)" }}>
             <Button
-              size="small"
-              onClick={() => setOpen(false)}
-              sx={{ fontSize: "11px", textTransform: "none", color: "var(--fg-muted)" }}
+              onClick={handleClose}
+              sx={{ fontSize: "12px", textTransform: "none", color: "var(--fg-muted)" }}
             >
-              Close
+              Cancel
             </Button>
             <Button
               type="submit"
-              size="small"
               variant="contained"
               disabled={!prompt.trim() || status.state === "submitting"}
               sx={{
-                fontSize: "11px",
+                fontSize: "12px",
                 textTransform: "none",
                 bgcolor: "var(--accent, #2563eb)",
+                px: 2,
                 "&:hover": { bgcolor: "var(--accent-hover, #1d4ed8)" },
               }}
             >
               {status.state === "submitting" ? (
                 <>
-                  <CircularProgress size={12} sx={{ color: "white", mr: 1 }} />
-                  Creating Issue &amp; CI Task...
+                  <CircularProgress size={14} sx={{ color: "white", mr: 1 }} />
+                  Creating Issue &amp; Dispatching CI...
                 </>
               ) : (
-                "Create Issue & Trigger CI PR"
+                "File Issue & Trigger CI Fix"
               )}
             </Button>
           </Box>
         </Box>
-      )}
-    </Box>
+      </Drawer>
+    </>
   );
 }
+
+// Export both names for backwards compatibility
+export const AgentDock = AgentWidget;

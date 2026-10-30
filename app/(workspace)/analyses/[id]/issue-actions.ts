@@ -7,13 +7,16 @@ import type {
   SubmissionResult,
 } from "@/lib/issue-agent/types";
 
+const BEACON_OWNER = process.env.BEACON_REPO_OWNER || "Mounieshh";
+const BEACON_REPO = process.env.BEACON_REPO_NAME || "beacon";
+
 export async function createRepositoryIssueAction(
   request: IssueSubmissionRequest,
 ): Promise<SubmissionResult> {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return { ok: false, error: "You must be signed in to report issues" };
+      return { ok: false, error: "You must be signed in to report development errors" };
     }
 
     const prompt = request.prompt?.trim();
@@ -21,37 +24,31 @@ export async function createRepositoryIssueAction(
       return { ok: false, error: "Please enter an issue description of at least 3 characters" };
     }
 
-    const { owner, name } = request.repository;
-    if (!owner || !name) {
-      return { ok: false, error: "Repository owner or name missing" };
-    }
-
     const titleSummary =
       prompt.length > 60 ? `${prompt.slice(0, 57)}...` : prompt;
-    const issueTitle = `[Beacon AI Fix] ${titleSummary}`;
+    const issueTitle = `[Beacon Fix] ${titleSummary}`;
 
     const metadata: BeaconIssueMetadata = {
       version: 1,
-      beaconAnalysisId: request.analysisId,
-      repository: `${owner}/${name}`,
-      commitSha: request.commitSha,
+      hostRepository: `${BEACON_OWNER}/${BEACON_REPO}`,
       activeFile: request.activeFile,
-      findingTitle: request.findingTitle,
+      analysisId: request.analysisId,
+      contextPage: request.contextPage,
       createdFrom: "beacon-agent-dock",
     };
 
     const issueBody = [
-      "## 🎯 Reported Issue",
+      "## 🐛 Beacon Development Issue",
       prompt,
       "",
-      "### 📍 Beacon Context",
-      `- **Repository:** \`${owner}/${name}\``,
-      `- **Analysis ID:** \`${request.analysisId}\``,
-      `- **Commit SHA:** \`${request.commitSha}\``,
+      "### 📍 Beacon App Context",
+      `- **Target Codebase:** \`${BEACON_OWNER}/${BEACON_REPO}\``,
       request.activeFile ? `- **Target File:** \`${request.activeFile}\`` : null,
-      request.findingTitle ? `- **Finding Reference:** ${request.findingTitle}` : null,
+      request.contextPage ? `- **Page Location:** \`${request.contextPage}\`` : null,
+      request.analysisId ? `- **Active Analysis ID:** \`${request.analysisId}\`` : null,
+      request.errorStack ? `\n\`\`\`\n${request.errorStack}\n\`\`\`` : null,
       "",
-      "> 🤖 *This issue was reported from Beacon. The CI workflow is triggered to inspect the codebase and prepare a verified draft pull request.*",
+      "> 🤖 *This development error was reported from Beacon. The CI fixer workflow will inspect this repository (`beacon`), verify the fix with `tsc --noEmit`, and open a Draft Pull Request.*",
       "",
       "<!-- BEACON_METADATA_START",
       JSON.stringify(metadata, null, 2),
@@ -67,14 +64,14 @@ export async function createRepositoryIssueAction(
       return {
         ok: true,
         issueNumber: 42,
-        issueUrl: `https://github.com/${owner}/${name}/issues/42`,
+        issueUrl: `https://github.com/${BEACON_OWNER}/${BEACON_REPO}/issues/42`,
         prBranch: "beacon/fix-issue-42",
         simulated: true,
       };
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/issues`,
+      `https://api.github.com/repos/${encodeURIComponent(BEACON_OWNER)}/${encodeURIComponent(BEACON_REPO)}/issues`,
       {
         method: "POST",
         headers: {
