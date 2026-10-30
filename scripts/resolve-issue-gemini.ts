@@ -65,9 +65,9 @@ async function main() {
       : undefined;
 
   const model = process.env.GEMINI_API_KEY
-    ? "gemini-2.5-flash"
+    ? "gemini-3.8-flash"
     : process.env.OPENROUTER_API_KEY
-      ? "google/gemini-2.5-flash"
+      ? "google/gemini-3.8-flash"
       : "gpt-4o-mini";
 
   const client = new OpenAI({
