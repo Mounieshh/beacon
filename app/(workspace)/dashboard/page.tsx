@@ -1,12 +1,13 @@
+import React from "react";
 import { redirect } from "next/navigation";
 
 class ErrorBoundary extends React.Component {
-  constructor(props) {
+  constructor(props: React.ComponentProps<typeof React.Component>) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
 
@@ -14,7 +15,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return <h1>Something went wrong.</h1>;
     }
-    return this.props.children;
+    return <>{this.props.children}</>;
   }
 }
 
