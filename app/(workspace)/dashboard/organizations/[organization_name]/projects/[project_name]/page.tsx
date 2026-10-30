@@ -9,7 +9,9 @@ interface PageProps {
 
 export default async function PluralOrgProjectDetailPage({ params }: PageProps) {
   const { organization_name, project_name } = await params;
-  redirect(
-    `/dashboard/organization/${encodeURIComponent(organization_name)}/projects/${encodeURIComponent(project_name)}`,
+  return (
+    <ErrorBoundary>
+      <div>Project: {project_name}</div>
+    </ErrorBoundary>
   );
 }
