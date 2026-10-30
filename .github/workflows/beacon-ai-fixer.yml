@@ -2,7 +2,7 @@ name: Beacon AI Autonomous Fixer
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   workflow_dispatch:
     inputs:
       issue_body:
@@ -14,12 +14,16 @@ on:
         required: false
         default: "1"
 
+concurrency:
+  group: beacon-fix-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   resolve-issue:
-    # Restrict automated execution to issues with 'beacon-ai-fix' opened/approved by repo collaborators, or manual dispatch
+    # Restrict execution to when beacon-ai-fix label is applied or via manual dispatch
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (contains(github.event.issue.labels.*.name, 'beacon-ai-fix') &&
+      (github.event.label.name == 'beacon-ai-fix' &&
        (github.event.issue.author_association == 'OWNER' ||
         github.event.issue.author_association == 'COLLABORATOR' ||
         github.event.issue.author_association == 'MEMBER'))
@@ -49,15 +53,25 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Gemini AI Fixer
-        id: fixer
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ISSUE_BODY: ${{ github.event.inputs.issue_body || github.event.issue.body }}
-        run: |
-          npx tsx scripts/resolve-issue-gemini.ts
+      - name: Run Gemini CLI Code Fixer
+        uses: google-github-actions/run-gemini-cli@v1
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          settings: |
+            {
+              "model": "gemini-3.8-flash"
+            }
+          prompt: |
+            You are an autonomous code repair agent. Fix the issue reported below in this repository.
+
+            Issue Title: ${{ github.event.issue.title }}
+            Issue Description:
+            ${{ github.event.inputs.issue_body || github.event.issue.body }}
+
+            Instructions:
+            1. Search and inspect the repository files related to this issue.
+            2. Edit the source files in place to fix the bug.
+            3. Ensure your edits compile cleanly with TypeScript.
 
       - name: Verify Fix Types & Compilation
         run: |
