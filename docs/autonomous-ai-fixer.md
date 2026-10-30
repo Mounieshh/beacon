@@ -126,8 +126,10 @@ sequenceDiagram
 
 ## 5. Verification & PR Delivery
 
-1. **Independent CI Verification:**
-   Following Aider's execution, the runner executes a standalone `pnpm exec tsc --noEmit` check as an immutable gate.
+1. **Commit Validation & Safety Guard:**
+   The workflow checks whether the agent produced commits ahead of `origin/main` (`git rev-list --count origin/main..HEAD`).
+   - If changes were made, the branch is pushed and verified with `pnpm exec tsc --noEmit`.
+   - If no changes were produced (e.g., the model requested clarification or could not locate the component), the workflow cleanly skips PR creation, avoiding HTTP 422 errors. It reads the agent's response and posts it directly to the issue.
 2. **Draft Pull Request Creation:**
    A GitHub Script step checks whether a PR already exists for branch `beacon/fix-issue-<number>`. If not, it opens a Draft PR against `main` containing:
    - Reference to the source issue (`Resolves #<id>`).
