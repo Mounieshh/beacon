@@ -76,7 +76,7 @@ export default async function LandingPage() {
         {/* Top subtle pill badge */}
         <div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[11px] font-medium text-[var(--fg-muted)] shadow-sm">
           <AutoAwesomeIcon sx={{ fontSize: 13, color: "var(--accent)" }} />
-          <span>AST-Grounded Codebase Intelligence & Security</span>
+          <span>Real-Time AST Codebase Intelligence & Autonomous Fixer</span>
         </div>
 
         {/* Centered Main Headline */}
