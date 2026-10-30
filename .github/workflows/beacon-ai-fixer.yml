@@ -28,6 +28,7 @@ jobs:
         github.event.issue.author_association == 'COLLABORATOR' ||
         github.event.issue.author_association == 'MEMBER'))
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
@@ -84,7 +85,10 @@ jobs:
             --model openrouter/nvidia/nemotron-3.5-lightning:free \
             --test-cmd "pnpm exec tsc --noEmit" \
             --auto-test \
-            --yes \
+            --yes-always \
+            --no-pretty \
+            --no-stream \
+            --no-analytics \
             --message-file /tmp/aider-prompt.txt
 
       - name: Push Fix Branch
