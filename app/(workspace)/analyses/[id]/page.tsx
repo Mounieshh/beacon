@@ -18,7 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // lands, so a finished run turns into its map in place.
 export default async function AnalysisPage({ params }: PageProps<"/analyses/[id]">) {
   const { id } = await params;
-  const loaded = UUID.test(id) ? await loadAnalysis(id) : null;
+  const loaded = UUID.test(id as string) ? await loadAnalysis(id as string) : null;
   if (!loaded) notFound();
 
   if (loaded.kind === "map") {
