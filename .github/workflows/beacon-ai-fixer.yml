@@ -173,7 +173,7 @@ Instructions:
             if (pulls.data.length > 0) {
               const existingPr = pulls.data[0];
               console.log(`PR #${existingPr.number} already exists.`);
-              core.setOutput('pull-request-number', existingPr.number);
+              core.setOutput('pr_number', existingPr.number);
               return;
             }
 
@@ -203,20 +203,21 @@ Instructions:
               labels: ['beacon-ai', 'automated-pr']
             });
 
-            core.setOutput('pull-request-number', pr.data.number);
+            core.setOutput('pr_number', pr.data.number);
 
       - name: Post Feedback Comment on Issue
-        if: steps.cpr.outputs.pull-request-number && (github.event.issue.number || github.event.inputs.issue_number)
+        if: steps.cpr.outputs.pr_number && (github.event.issue.number || github.event.inputs.issue_number)
         uses: actions/github-script@v7
         with:
           script: |
             const issueNum = context.issue.number || Number(context.payload?.inputs?.issue_number);
+            const prNum = '${{ steps.cpr.outputs.pr_number }}';
             if (issueNum) {
               await github.rest.issues.createComment({
                 issue_number: issueNum,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `🚀 **Beacon AI Agent** has resolved this issue using Aider (\`nvidia/nemotron-3.5-lightning:free\`) and opened draft pull request #${{ steps.cpr.outputs.pull-request-number }} with passing typechecks.`
+                body: `🚀 **Beacon AI Agent** has resolved this issue using Aider (\`nvidia/nemotron-3.5-lightning:free\`) and opened draft pull request #${prNum} with passing typechecks.`
               });
             }
 
