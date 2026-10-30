@@ -19,6 +19,7 @@ export type Tab = "structure" | "explanation";
 
 /** What the pane says about the repository that isn't in the file and edge lists. */
 export type RepositoryFacts = {
+  owner?: string;
   name: string;
   /** The root first, then every package.json folder, each with the adapter that detected it. */
   projects: Project[];

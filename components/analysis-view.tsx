@@ -23,6 +23,7 @@ import { loadStoredExplanations, saveStoredExplanation, MAX_GENERATION_LIMIT } f
 import { DependencyMap } from "./map/dependency-map";
 import { RouteTable } from "./route-table";
 import { Shell } from "./shell";
+import { AgentDock } from "./agent-dock";
 
 // Owns what the map, the rail and the pane share: which folders are open,
 // what's selected, what's hovered, which category is picked, and what the pane
@@ -250,6 +251,12 @@ export function AnalysisView({
               />
             )}
           </Box>
+          <AgentDock
+            analysisId={analysisId}
+            repository={repository}
+            commitSha={commitSha}
+            selectedFile={selection?.kind === "file" ? selection.path : null}
+          />
         </Box>
       }
       detail={
