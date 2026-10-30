@@ -83,7 +83,7 @@ async function callGeminiNative(
   systemPrompt: string,
   userMessage: string,
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -220,14 +220,14 @@ Respond with ONLY a JSON object in this format:
   let rawJson = "";
 
   if (geminiKey) {
-    console.log("[Beacon AI Fixer] Calling Gemini API (gemini-2.5-flash)...");
+    console.log("[Beacon AI Fixer] Calling Gemini API (gemini-3.8-flash)...");
     rawJson = await callGeminiNative(geminiKey, systemPrompt, userMessage);
   } else if (openRouterKey) {
     console.log("[Beacon AI Fixer] Calling OpenRouter API...");
     rawJson = await callOpenAICompatible(
       "https://openrouter.ai/api/v1",
       openRouterKey,
-      "google/gemini-2.5-flash",
+      "google/gemini-3.8-flash",
       systemPrompt,
       userMessage,
     );
