@@ -61,7 +61,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ISSUE_BODY: ${{ github.event.inputs.issue_body || github.event.issue.body }}
         run: |
-          npx tsx scripts/resolve-issue-gemini.ts
+          pnpm exec tsx scripts/resolve-issue-gemini.ts
 
       - name: Verify Fix Types & Compilation
         run: |
