@@ -12,6 +12,7 @@ import {
   LinearProgress,
   Paper,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -20,7 +21,8 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import BugReportIcon from "@mui/icons-material/BugReport";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import StopIcon from "@mui/icons-material/Stop";
 import type { AgentLogMessage, AgentStepPhase } from "@/lib/issue-agent/types";
 import {
   checkPullRequestStatusAction,
@@ -43,14 +45,19 @@ const THINKING_PHRASES = [
   "Formulating draft pull request bundle...",
 ];
 
+const SUGGESTIONS = [
+  "Change top navbar theme selection to dropdown",
+  "Add fallback error boundary to analysis graphs",
+  "Improve responsive layout for mobile viewport",
+];
+
 export function AgentWidget({ analysisId, contextPage }: Props) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [errorDetails, setErrorDetails] = useState("");
   const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [thinkingIndex, setThinkingIndex] = useState(0);
-  const [activePhase, setActivePhase] = useState<AgentStepPhase>("dispatching");
+  const [, setActivePhase] = useState<AgentStepPhase>("dispatching");
   const [logs, setLogs] = useState<AgentLogMessage[]>([]);
   const [isPending, startTransition] = useTransition();
 
@@ -69,11 +76,12 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   } | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const phaseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const phaseTimersRef = useRef<NodeJS.Timeout[]>([]);
 
-  // Auto scroll chat to bottom on new messages
+  // Auto scroll chat stream to bottom
   useEffect(() => {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -85,7 +93,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     if (status === "running") {
       thinkingTimerRef.current = setInterval(() => {
         setThinkingIndex((prev) => (prev + 1) % THINKING_PHRASES.length);
-      }, 2500);
+      }, 2400);
     } else {
       if (thinkingTimerRef.current) clearInterval(thinkingTimerRef.current);
     }
@@ -97,6 +105,10 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
   // Handle heuristic staged progress logs while waiting for CI
   useEffect(() => {
     if (status !== "running" || !activeIssue) return;
+
+    // Clear any previous phase timers
+    phaseTimersRef.current.forEach((t) => clearTimeout(t));
+    phaseTimersRef.current = [];
 
     const timeline = [
       {
@@ -121,7 +133,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       },
     ];
 
-    const timers = timeline.map(({ delay, phase, content }) =>
+    phaseTimersRef.current = timeline.map(({ delay, phase, content }) =>
       setTimeout(() => {
         setActivePhase(phase);
         setLogs((prev) => [
@@ -138,7 +150,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     );
 
     return () => {
-      timers.forEach((t) => clearTimeout(t));
+      phaseTimersRef.current.forEach((t) => clearTimeout(t));
     };
   }, [status, activeIssue]);
 
@@ -178,7 +190,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           },
         ]);
       } else if (activeIssue.simulated && pollCount >= 8) {
-        // Simulated local fallback completes after ~32s
         if (pollTimerRef.current) clearInterval(pollTimerRef.current);
         const mockPrNumber = activeIssue.issueNumber + 1;
         const mockPrUrl = `https://github.com/Mounieshh/beacon/pull/${mockPrNumber}`;
@@ -208,7 +219,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       }
     };
 
-    // First check after 6 seconds, then every 5 seconds
     const initialDelay = setTimeout(() => {
       poll();
       pollTimerRef.current = setInterval(poll, 5000);
@@ -217,16 +227,30 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     return () => {
       clearTimeout(initialDelay);
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-      if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
     };
   }, [status, activeIssue]);
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!prompt.trim() || isPending) return;
+  const handlePause = () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    phaseTimersRef.current.forEach((t) => clearTimeout(t));
+    phaseTimersRef.current = [];
+
+    setStatus("idle");
+    setLogs((prev) => [
+      ...prev,
+      {
+        id: `paused-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        sender: "system",
+        content: "Fixer agent paused by developer.",
+      },
+    ]);
+  };
+
+  const handleSend = () => {
+    if (!prompt.trim() || isPending || status === "running") return;
 
     const currentPrompt = prompt.trim();
-    const currentError = errorDetails.trim();
     const page =
       contextPage ||
       (typeof window !== "undefined" ? window.location.pathname : undefined);
@@ -236,14 +260,14 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     setErrorMessage("");
     setActivePr(null);
 
-    const initialUserMessage: AgentLogMessage = {
+    const userMessage: AgentLogMessage = {
       id: `user-${Date.now()}`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       sender: "user",
       content: currentPrompt,
     };
 
-    const initialAgentMessage: AgentLogMessage = {
+    const agentMessage: AgentLogMessage = {
       id: `agent-init-${Date.now()}`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       sender: "agent",
@@ -251,14 +275,14 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
       content: "Registering issue on GitHub and preparing autonomous fixer dispatch...",
     };
 
-    setLogs([initialUserMessage, initialAgentMessage]);
+    setLogs((prev) => [...prev, userMessage, agentMessage]);
+    setPrompt("");
 
     startTransition(async () => {
       const result = await createRepositoryIssueAction({
         prompt: currentPrompt,
         analysisId,
         contextPage: page,
-        errorStack: currentError || undefined,
       });
 
       if (result.ok) {
@@ -285,9 +309,6 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
             },
           },
         ]);
-
-        setPrompt("");
-        setErrorDetails("");
       } else {
         setStatus("error");
         setActivePhase("error");
@@ -306,13 +327,25 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   const handleReset = () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    phaseTimersRef.current.forEach((t) => clearTimeout(t));
+    phaseTimersRef.current = [];
+
     setStatus("idle");
     setActivePhase("dispatching");
     setActiveIssue(null);
     setActivePr(null);
     setLogs([]);
     setErrorMessage("");
+    setPrompt("");
   };
 
   const handleClose = () => {
@@ -387,10 +420,11 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           },
         }}
       >
-        {/* Console Header */}
+        {/* Header */}
         <Box
           sx={{
-            p: 2.5,
+            p: 2,
+            px: 2.5,
             borderBottom: "1px solid var(--line)",
             display: "flex",
             alignItems: "center",
@@ -403,13 +437,18 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
               sx={{
                 width: 32,
                 height: 32,
-                bgcolor: status === "running" ? "#2563eb" : status === "completed" ? "#16a34a" : "var(--line)",
+                bgcolor:
+                  status === "running"
+                    ? "var(--accent, #2563eb)"
+                    : status === "completed"
+                    ? "#16a34a"
+                    : "var(--line)",
                 color: status === "idle" ? "var(--fg)" : "#ffffff",
                 transition: "all 0.3s ease",
               }}
             >
               {status === "completed" ? (
-                <CheckCircleIcon sx={{ fontSize: 20 }} />
+                <CheckCircleIcon sx={{ fontSize: 18 }} />
               ) : status === "running" ? (
                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
               ) : (
@@ -438,28 +477,37 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
               </Typography>
             </Box>
           </Box>
-          <IconButton size="small" onClick={handleClose} sx={{ color: "var(--fg-muted)" }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            {logs.length > 0 && (
+              <Tooltip title="Reset Chat">
+                <IconButton size="small" onClick={handleReset} sx={{ color: "var(--fg-muted)" }}>
+                  <RefreshIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+            <IconButton size="small" onClick={handleClose} sx={{ color: "var(--fg-muted)" }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
         </Box>
 
-        {/* Dynamic Status / Shimmer Bar when Agent is Running */}
+        {/* Dynamic Status Pill when Agent is Running */}
         {status === "running" && (
           <Box sx={{ width: "100%" }}>
             <LinearProgress
               sx={{
-                height: 3,
+                height: 2.5,
                 bgcolor: "rgba(37, 99, 235, 0.15)",
                 "& .MuiLinearProgress-bar": {
                   bgcolor: "var(--accent, #2563eb)",
                 },
               }}
             />
-            {/* Claude-style dynamic thinking pill */}
             <Box
               sx={{
                 px: 2.5,
-                py: 1,
+                py: 0.75,
                 bgcolor: "rgba(37, 99, 235, 0.08)",
                 borderBottom: "1px solid rgba(37, 99, 235, 0.18)",
                 display: "flex",
@@ -470,7 +518,7 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
               <CircularProgress size={12} sx={{ color: "var(--accent, #2563eb)" }} />
               <Typography
                 sx={{
-                  fontSize: "12px",
+                  fontSize: "11px",
                   fontWeight: 500,
                   color: "var(--accent, #2563eb)",
                   fontFamily: "monospace",
@@ -483,331 +531,377 @@ export function AgentWidget({ analysisId, contextPage }: Props) {
           </Box>
         )}
 
-        {/* Main Body: Mode Switching */}
-        {status === "idle" ? (
-          /* Form Input Mode */
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2.5,
-              flex: 1,
-              overflowY: "auto",
-            }}
-          >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)" }}>
-                Describe Bug or Request *
-              </Typography>
-              <TextField
-                required
-                fullWidth
-                multiline
-                rows={4}
-                size="small"
-                placeholder="What needs to be fixed or modified in Beacon? (e.g. 'Change the top navbar theme selection to a dropdown menu')..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                sx={{
-                  "& .MuiInputBase-root": {
-                    fontSize: "13px",
-                    bgcolor: "var(--canvas)",
-                    color: "var(--fg)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)" }}>
-                Console Stack / Error Details (Optional)
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                size="small"
-                placeholder="Paste any stack trace, runtime console log, or compiler error..."
-                value={errorDetails}
-                onChange={(e) => setErrorDetails(e.target.value)}
-                sx={{
-                  "& .MuiInputBase-root": {
-                    fontSize: "11px",
-                    bgcolor: "var(--canvas)",
-                    color: "var(--fg)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 1.5,
-                    fontFamily: "monospace",
-                  },
-                }}
-              />
-            </Box>
-
+        {/* Scrollable Chat Area */}
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            p: 2.5,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          {logs.length === 0 ? (
+            /* Minimalist Empty / Welcome State */
             <Box
               sx={{
-                p: 2,
-                borderRadius: 1.5,
-                bgcolor: "var(--canvas)",
-                border: "1px solid var(--line)",
-              }}
-            >
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)", mb: 0.5 }}>
-                Autonomous CI Pipeline
-              </Typography>
-              <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", lineHeight: 1.5 }}>
-                Submitting creates a GitHub issue in <strong>Mounieshh/beacon</strong>.
-                The CI workflow automatically spins up Aider, applies targeted code diffs, verifies compilation with <code>tsc --noEmit</code>, and opens a Draft Pull Request.
-              </Typography>
-            </Box>
-
-            <Box sx={{ flex: 1 }} />
-
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={!prompt.trim() || isPending}
-              sx={{
-                py: 1.25,
-                fontSize: "13px",
-                fontWeight: 600,
-                textTransform: "none",
-                bgcolor: "var(--accent, #2563eb)",
-                borderRadius: 1.5,
-                "&:hover": { bgcolor: "var(--accent-hover, #1d4ed8)" },
-              }}
-            >
-              Launch Fixer Agent
-            </Button>
-          </Box>
-        ) : (
-          /* Live Agent Activity & Output Stream */
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-              overflow: "hidden",
-            }}
-          >
-            {/* Chat Bubble / Terminal Log Stream */}
-            <Box
-              sx={{
-                p: 2.5,
-                flex: 1,
-                overflowY: "auto",
+                my: "auto",
                 display: "flex",
                 flexDirection: "column",
-                gap: 2,
+                alignItems: "center",
+                textAlign: "center",
+                px: 2,
               }}
             >
-              {logs.map((log) => {
-                const isUser = log.sender === "user";
-                const isSystem = log.sender === "system";
+              <Avatar
+                sx={{
+                  width: 52,
+                  height: 52,
+                  bgcolor: "rgba(37, 99, 235, 0.1)",
+                  color: "var(--accent, #2563eb)",
+                  mb: 1.5,
+                }}
+              >
+                <SmartToyIcon sx={{ fontSize: 28 }} />
+              </Avatar>
+              <Typography sx={{ fontSize: "15px", fontWeight: 600, color: "var(--fg)", mb: 0.75 }}>
+                How can Beacon Fixer help?
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: "12px",
+                  color: "var(--fg-muted)",
+                  lineHeight: 1.6,
+                  maxWidth: 340,
+                  mb: 3,
+                }}
+              >
+                Describe an issue or code change below. The agent will inspect the repository, write targeted diffs, verify clean compilation, and raise a Pull Request.
+              </Typography>
 
-                if (isSystem) {
-                  return (
-                    <Box
-                      key={log.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        my: 0.5,
-                        px: 1.5,
-                        py: 0.75,
-                        bgcolor: "var(--canvas)",
-                        border: "1px dashed var(--line)",
-                        borderRadius: 1,
-                      }}
-                    >
-                      <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", fontFamily: "monospace" }}>
-                        [{log.timestamp}] {log.content}
-                      </Typography>
-                    </Box>
-                  );
-                }
+              {/* Suggestions */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1, width: "100%" }}>
+                {SUGGESTIONS.map((suggestion) => (
+                  <Paper
+                    key={suggestion}
+                    elevation={0}
+                    onClick={() => {
+                      setPrompt(suggestion);
+                      inputRef.current?.focus();
+                    }}
+                    sx={{
+                      p: 1.25,
+                      px: 1.75,
+                      borderRadius: 2,
+                      bgcolor: "var(--canvas)",
+                      border: "1px solid var(--line)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all 0.15s ease",
+                      "&:hover": {
+                        borderColor: "var(--accent, #2563eb)",
+                        bgcolor: "rgba(37, 99, 235, 0.05)",
+                      },
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>
+                      {suggestion}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Box>
+            </Box>
+          ) : (
+            /* Active Message Stream */
+            logs.map((log) => {
+              const isUser = log.sender === "user";
+              const isSystem = log.sender === "system";
 
+              if (isSystem) {
                 return (
                   <Box
                     key={log.id}
                     sx={{
                       display: "flex",
-                      flexDirection: "column",
-                      alignItems: isUser ? "flex-end" : "flex-start",
-                      width: "100%",
+                      alignItems: "center",
+                      gap: 1,
+                      my: 0.25,
+                      px: 1.5,
+                      py: 0.75,
+                      bgcolor: "var(--canvas)",
+                      border: "1px dashed var(--line)",
+                      borderRadius: 1,
                     }}
                   >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        mb: 0.5,
-                      }}
-                    >
-                      <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)", fontWeight: 500 }}>
-                        {isUser ? "You" : "Beacon Fixer"}
-                      </Typography>
-                      <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)" }}>
-                        {log.timestamp}
-                      </Typography>
-                    </Box>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 1.75,
-                        maxWidth: "85%",
-                        borderRadius: 2,
-                        bgcolor: isUser ? "var(--accent, #2563eb)" : "var(--canvas)",
-                        color: isUser ? "#ffffff" : "var(--fg)",
-                        border: isUser ? "none" : "1px solid var(--line)",
-                        fontSize: "12px",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <Typography sx={{ fontSize: "12px", whiteSpace: "pre-wrap" }}>
-                        {log.content}
-                      </Typography>
-
-                      {log.metadata?.issueUrl && (
-                        <Box sx={{ mt: 1 }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            href={log.metadata.issueUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            endIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
-                            sx={{
-                              fontSize: "11px",
-                              textTransform: "none",
-                              py: 0.25,
-                              px: 1,
-                              borderColor: isUser ? "rgba(255,255,255,0.4)" : "var(--line)",
-                              color: isUser ? "#ffffff" : "var(--accent, #2563eb)",
-                            }}
-                          >
-                            View Issue #{log.metadata.issueNumber}
-                          </Button>
-                        </Box>
-                      )}
-                    </Paper>
+                    <Typography sx={{ fontSize: "11px", color: "var(--fg-muted)", fontFamily: "monospace" }}>
+                      [{log.timestamp}] {log.content}
+                    </Typography>
                   </Box>
                 );
-              })}
+              }
 
-              <div ref={chatBottomRef} />
-            </Box>
-
-            {/* Completed Callout Card */}
-            {status === "completed" && activePr && (
-              <Box
-                sx={{
-                  p: 2.5,
-                  borderTop: "1px solid var(--line)",
-                  bgcolor: "rgba(34, 197, 94, 0.08)",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                  <CheckCircleIcon sx={{ color: "#16a34a", fontSize: 20 }} />
-                  <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#16a34a" }}>
-                    Pull Request #{activePr.prNumber} Raised!
-                  </Typography>
-                </Box>
-
-                <Typography sx={{ fontSize: "12px", color: "var(--fg)", mb: 1.5, lineHeight: 1.5 }}>
-                  The agent finished applying code edits and confirmed clean compilation with <code>tsc --noEmit</code>.
-                </Typography>
-
+              return (
                 <Box
+                  key={log.id}
                   sx={{
-                    p: 1.5,
-                    borderRadius: 1,
-                    bgcolor: "var(--surface)",
-                    border: "1px solid var(--line)",
-                    mb: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: isUser ? "flex-end" : "flex-start",
+                    width: "100%",
                   }}
                 >
-                  <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-muted)", mb: 0.25 }}>
-                    ACTION REQUIRED
-                  </Typography>
-                  <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>
-                    Please <strong>review and merge PR #{activePr.prNumber}</strong> into <code>main</code> to see the changes take effect in the Beacon app.
-                  </Typography>
-                </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)", fontWeight: 500 }}>
+                      {isUser ? "You" : "Beacon Fixer"}
+                    </Typography>
+                    <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)" }}>
+                      {log.timestamp}
+                    </Typography>
+                  </Box>
 
-                <Box sx={{ display: "flex", gap: 1.5 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    href={activePr.prUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+                  <Paper
+                    elevation={0}
                     sx={{
+                      p: 1.5,
+                      px: 2,
+                      maxWidth: "88%",
+                      borderRadius: 2.5,
+                      bgcolor: isUser ? "var(--accent, #2563eb)" : "var(--canvas)",
+                      color: isUser ? "#ffffff" : "var(--fg)",
+                      border: isUser ? "none" : "1px solid var(--line)",
                       fontSize: "12px",
-                      fontWeight: 600,
-                      textTransform: "none",
-                      bgcolor: "#16a34a",
-                      "&:hover": { bgcolor: "#15803d" },
+                      lineHeight: 1.5,
                     }}
                   >
-                    Review PR on GitHub
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handleReset}
-                    startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
-                    sx={{
-                      fontSize: "12px",
-                      textTransform: "none",
-                      color: "var(--fg)",
-                      borderColor: "var(--line)",
-                    }}
-                  >
-                    New Fix
-                  </Button>
+                    <Typography sx={{ fontSize: "12px", whiteSpace: "pre-wrap" }}>
+                      {log.content}
+                    </Typography>
+
+                    {log.metadata?.issueUrl && (
+                      <Box sx={{ mt: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          href={log.metadata.issueUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          endIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
+                          sx={{
+                            fontSize: "11px",
+                            textTransform: "none",
+                            py: 0.25,
+                            px: 1,
+                            borderColor: isUser ? "rgba(255,255,255,0.4)" : "var(--line)",
+                            color: isUser ? "#ffffff" : "var(--accent, #2563eb)",
+                          }}
+                        >
+                          View Issue #{log.metadata.issueNumber}
+                        </Button>
+                      </Box>
+                    )}
+                  </Paper>
                 </Box>
+              );
+            })
+          )}
+
+          {/* Completed Callout Card */}
+          {status === "completed" && activePr && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: "rgba(34, 197, 94, 0.08)",
+                border: "1px solid rgba(34, 197, 94, 0.3)",
+                my: 1,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <CheckCircleIcon sx={{ color: "#16a34a", fontSize: 20 }} />
+                <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#16a34a" }}>
+                  Pull Request #{activePr.prNumber} Raised!
+                </Typography>
               </Box>
-            )}
 
-            {/* Error View */}
-            {status === "error" && (
+              <Typography sx={{ fontSize: "12px", color: "var(--fg)", mb: 1.5, lineHeight: 1.5 }}>
+                Fix verified cleanly with <code>tsc --noEmit</code>.
+              </Typography>
+
               <Box
                 sx={{
-                  p: 2.5,
-                  borderTop: "1px solid var(--line)",
-                  bgcolor: "rgba(239, 68, 68, 0.08)",
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  bgcolor: "var(--surface)",
+                  border: "1px solid var(--line)",
+                  mb: 1.5,
                 }}
               >
-                <Typography sx={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", mb: 1 }}>
-                  Agent Execution Failed
+                <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-muted)", mb: 0.25 }}>
+                  ACTION REQUIRED
                 </Typography>
-                <Typography sx={{ fontSize: "12px", color: "var(--fg)", mb: 2 }}>
-                  {errorMessage || "An unexpected error occurred while communicating with the fixer pipeline."}
+                <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>
+                  Please <strong>review and merge PR #{activePr.prNumber}</strong> into <code>main</code> to see the changes take effect in the Beacon app.
                 </Typography>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={handleReset}
-                  sx={{
-                    fontSize: "12px",
-                    textTransform: "none",
-                    color: "var(--fg)",
-                    borderColor: "var(--line)",
-                  }}
-                >
-                  Start Over
-                </Button>
               </Box>
-            )}
+
+              <Button
+                fullWidth
+                variant="contained"
+                href={activePr.prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+                sx={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  bgcolor: "#16a34a",
+                  "&:hover": { bgcolor: "#15803d" },
+                }}
+              >
+                Review PR #{activePr.prNumber} on GitHub
+              </Button>
+            </Box>
+          )}
+
+          {/* Error Message */}
+          {status === "error" && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                my: 1,
+              }}
+            >
+              <Typography sx={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", mb: 0.5 }}>
+                Execution Failed
+              </Typography>
+              <Typography sx={{ fontSize: "12px", color: "var(--fg)" }}>
+                {errorMessage || "An unexpected error occurred during fixer execution."}
+              </Typography>
+            </Box>
+          )}
+
+          <div ref={chatBottomRef} />
+        </Box>
+
+        {/* Bottom Chatbot Input Container */}
+        <Box
+          sx={{
+            p: 2,
+            borderTop: "1px solid var(--line)",
+            bgcolor: "var(--surface)",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              bgcolor: "var(--canvas)",
+              border: "1px solid var(--line)",
+              borderRadius: 2.5,
+              p: 1.25,
+              transition: "border-color 0.2s ease",
+              "&:focus-within": {
+                borderColor: "var(--accent, #2563eb)",
+              },
+            }}
+          >
+            <TextField
+              inputRef={inputRef}
+              fullWidth
+              multiline
+              maxRows={5}
+              placeholder="Describe a bug or change for Beacon... (Enter to send)"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={status === "running"}
+              variant="standard"
+              slotProps={{
+                input: {
+                  disableUnderline: true,
+                  sx: {
+                    fontSize: "13px",
+                    color: "var(--fg)",
+                    px: 0.5,
+                    py: 0.25,
+                  },
+                },
+              }}
+            />
+
+            {/* Bottom Inner Toolbar with Send and Pause Button */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                pt: 1,
+                mt: 0.5,
+              }}
+            >
+              <Typography sx={{ fontSize: "10px", color: "var(--fg-muted)", px: 0.5 }}>
+                Enter ↵ to send • Shift + Enter for new line
+              </Typography>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                {status === "running" ? (
+                  <Tooltip title="Pause Agent">
+                    <IconButton
+                      size="small"
+                      onClick={handlePause}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: "rgba(239, 68, 68, 0.15)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        "&:hover": {
+                          bgcolor: "rgba(239, 68, 68, 0.25)",
+                        },
+                      }}
+                    >
+                      <StopIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Send Instruction">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={handleSend}
+                        disabled={!prompt.trim() || isPending}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: prompt.trim() ? "var(--accent, #2563eb)" : "var(--line)",
+                          color: prompt.trim() ? "#ffffff" : "var(--fg-muted)",
+                          transition: "all 0.15s ease",
+                          "&:hover": {
+                            bgcolor: prompt.trim() ? "var(--accent-hover, #1d4ed8)" : "var(--line)",
+                          },
+                        }}
+                      >
+                        <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
+              </Box>
+            </Box>
           </Box>
-        )}
+        </Box>
       </Drawer>
     </>
   );
